@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head></head>
+<body>
+<footer th:fragment="footer" class="footer-canteen">
+    <div class="container">
+        <div class="row g-4 mb-4">
+            <div class="col-md-5">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-cup-hot-fill text-warning fs-4 me-2"></i>
+                    <h5 class="text-white mb-0 fw-bold">Campus Canteen Food Hub</h5>
+                </div>
+                <p class="small text-secondary mb-3">
+                    Skip the long break-time queues! Pre-order hot, hygienic meals and refreshing drinks directly from your phone and pick them up using your digital token.
+                </p>
+                <div class="d-flex gap-2">
+                    <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-clock me-1"></i>Open: 8:00 AM - 6:30 PM</span>
+                    <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-geo-alt me-1"></i>Block B Ground Floor</span>
+                </div>
+            </div>
+
+            <div class="col-md-3 offset-md-1">
+                <h6 class="text-white fw-semibold mb-3">Quick Navigation</h6>
+                <ul class="list-unstyled small">
+                    <li class="mb-2"><a th:href="@{/menu}" class="text-secondary text-decoration-none hover-white">Explore Full Menu</a></li>
+                    <li class="mb-2"><a th:href="@{/cart}" class="text-secondary text-decoration-none hover-white">View Active Tray</a></li>
+                    <li class="mb-2"><a th:href="@{/orders}" class="text-secondary text-decoration-none hover-white">Track Recent Orders</a></li>
+                    <li class="mb-2"><a th:href="@{/login}" class="text-secondary text-decoration-none hover-white">Student Account</a></li>
+                </ul>
+            </div>
+
+            <div class="col-md-3">
+                <h6 class="text-white fw-semibold mb-3">Canteen Counter Staff</h6>
+                <p class="small text-secondary mb-2">Are you a chef or counter operator?</p>
+                <a th:href="@{/admin/orders}" class="btn btn-sm btn-outline-warning rounded-pill px-3">
+                    <i class="bi bi-speedometer2 me-1"></i>Kitchen Display Board
+                </a>
+            </div>
+        </div>
+
+        <div class="border-top border-secondary pt-3 text-center text-secondary small">
+            &copy; 2026 Campus Canteen Pre-order System. Made for college students & staff.
+        </div>
+    </div>
+</footer>
+</body>
+</html>

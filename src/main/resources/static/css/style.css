@@ -1,0 +1,370 @@
+/* Campus Canteen Custom Stylesheet */
+:root {
+    --primary: #f97316;
+    --primary-hover: #ea580c;
+    --primary-dark: #c2410c;
+    --primary-light: #ffedd5;
+    --secondary: #0f172a;
+    --accent: #10b981;
+    --bg-light: #f8fafc;
+    --card-bg: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-light);
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-container {
+    flex: 1;
+}
+
+/* Navbar */
+.navbar-canteen {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.navbar-brand {
+    font-weight: 800;
+    font-size: 1.35rem;
+    letter-spacing: -0.5px;
+    color: #ffffff !important;
+}
+
+.brand-icon {
+    color: var(--primary);
+    margin-right: 6px;
+}
+
+.nav-link {
+    color: #cbd5e1 !important;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+    color: #ffffff !important;
+}
+
+.cart-pill {
+    background: var(--primary);
+    color: #ffffff;
+    padding: 0.35rem 0.85rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.cart-pill:hover {
+    background: var(--primary-hover);
+    color: #ffffff;
+    transform: scale(1.03);
+}
+
+/* Hero Section */
+.hero-banner {
+    background: linear-gradient(135deg, #ea580c 0%, #f97316 60%, #fb923c 100%);
+    color: #ffffff;
+    border-radius: 1.5rem;
+    padding: 3.5rem 2.5rem;
+    box-shadow: 0 10px 25px -5px rgba(249, 115, 22, 0.3);
+    margin-bottom: 2.5rem;
+}
+
+/* Category Filter Pills */
+.category-pill {
+    border-radius: 9999px;
+    padding: 0.5rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    display: inline-block;
+}
+
+.category-pill:hover {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    border-color: var(--primary);
+}
+
+.category-pill.active {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+}
+
+/* Food Cards */
+.food-card {
+    border: 1px solid var(--border-color);
+    border-radius: 1.2rem;
+    background: var(--card-bg);
+    overflow: hidden;
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.food-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+}
+
+.food-img-wrapper {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.food-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.food-card:hover .food-img {
+    transform: scale(1.05);
+}
+
+.food-badge-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.diet-dot {
+    width: 22px;
+    height: 22px;
+    background: #ffffff;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+.diet-dot-inner {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.diet-veg { border: 1.5px solid #16a34a; }
+.diet-veg .diet-dot-inner { background-color: #16a34a; }
+.diet-nonveg { border: 1.5px solid #dc2626; }
+.diet-nonveg .diet-dot-inner { background-color: #dc2626; }
+
+.prep-badge {
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(4px);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 9999px;
+}
+
+.food-body {
+    padding: 1.25rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.food-title {
+    font-weight: 700;
+    font-size: 1.15rem;
+    margin-bottom: 0.35rem;
+    color: var(--secondary);
+}
+
+.food-desc {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-bottom: 1rem;
+    flex: 1;
+}
+
+.food-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.8rem;
+    border-top: 1px dashed var(--border-color);
+}
+
+.food-price {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.btn-canteen-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+    font-weight: 600;
+    border-radius: 0.65rem;
+    padding: 0.5rem 1.1rem;
+    transition: all 0.2s ease;
+}
+
+.btn-canteen-primary:hover {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+/* Digital Token Presentation */
+.token-card {
+    background: #ffffff;
+    border-radius: 1.5rem;
+    border: 2px dashed var(--primary);
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(249, 115, 22, 0.12);
+    position: relative;
+    overflow: hidden;
+}
+
+.token-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, #f97316, #fb923c, #10b981);
+}
+
+.token-number {
+    font-size: 3.5rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: var(--primary-dark);
+    line-height: 1;
+    margin: 0.8rem 0;
+    text-shadow: 0 2px 10px rgba(249, 115, 22, 0.2);
+}
+
+/* Status Tracker Stepper */
+.status-tracker {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    margin: 2.5rem 0;
+}
+
+.status-tracker::before {
+    content: '';
+    position: absolute;
+    top: 24px;
+    left: 40px;
+    right: 40px;
+    height: 4px;
+    background: #e2e8f0;
+    z-index: 1;
+}
+
+.tracker-step {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 25%;
+    text-align: center;
+}
+
+.tracker-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 3px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: #94a3b8;
+    transition: all 0.3s ease;
+}
+
+.tracker-step.active .tracker-icon {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 0 0 6px var(--primary-light);
+}
+
+.tracker-step.completed .tracker-icon {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #ffffff;
+}
+
+.tracker-label {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.tracker-step.active .tracker-label,
+.tracker-step.completed .tracker-label {
+    color: var(--secondary);
+    font-weight: 700;
+}
+
+/* Kitchen Display System (KDS) Cards */
+.kds-card {
+    border-radius: 1rem;
+    border-left: 5px solid var(--primary);
+    background: #ffffff;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1.25rem;
+    transition: transform 0.2s ease;
+}
+
+.kds-card:hover {
+    transform: translateY(-2px);
+}
+
+.kds-card.status-PENDING { border-left-color: #f59e0b; }
+.kds-card.status-PREPARING { border-left-color: #3b82f6; }
+.kds-card.status-READY_FOR_PICKUP { border-left-color: #10b981; }
+.kds-card.status-COMPLETED { border-left-color: #64748b; }
+
+/* Footer */
+.footer-canteen {
+    background-color: #0f172a;
+    color: #94a3b8;
+    padding: 2.5rem 0 1.5rem 0;
+    margin-top: 4rem;
+}

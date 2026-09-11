@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head></head>
+<body>
+<nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark navbar-canteen sticky-top">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" th:href="@{/}">
+            <i class="bi bi-cup-hot-fill brand-icon fs-4"></i>
+            <span>Campus<span style="color: var(--primary);">Canteen</span></span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#canteenNav"
+                aria-controls="canteenNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="canteenNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/}"><i class="bi bi-house-door me-1"></i>Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/menu}"><i class="bi bi-grid me-1"></i>Food Menu</a>
+                </li>
+                <li class="nav-item" th:if="${currentStudent != null}">
+                    <a class="nav-link" th:href="@{/orders}"><i class="bi bi-clock-history me-1"></i>My Orders</a>
+                </li>
+            </ul>
+
+            <div class="d-flex align-items-center gap-2">
+                <!-- Cart Pill -->
+                <a th:href="@{/cart}" class="cart-pill">
+                    <i class="bi bi-bag-check-fill"></i>
+                    <span>Tray</span>
+                    <span class="badge bg-light text-dark rounded-pill" th:text="${cartCount != null ? cartCount : 0}">0</span>
+                </a>
+
+                <!-- Logged-in Student Dropdown -->
+                <div class="dropdown" th:if="${currentStudent != null}">
+                    <button class="btn btn-outline-light btn-sm dropdown-toggle rounded-pill px-3" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle me-1"></i>
+                        <span th:text="${currentStudent.name}">Student</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li class="dropdown-header">
+                            <strong th:text="${currentStudent.name}">Name</strong><br>
+                            <small class="text-muted" th:text="'Roll: ' + ${currentStudent.rollNumber}">Roll</small><br>
+                            <span class="badge bg-success-subtle text-success mt-1"
+                                  th:text="'Wallet: ₹' + ${#numbers.formatDecimal(currentStudent.walletBalance, 1, 2)}">₹500.00</span>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" th:href="@{/orders}"><i class="bi bi-receipt me-2"></i>My Orders</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" th:href="@{/logout}"><i class="bi bi-box-arrow-right me-2"></i>Sign Out</a></li>
+                    </ul>
+                </div>
+
+                <!-- Not Logged-in -->
+                <div th:unless="${currentStudent != null}" class="d-flex gap-2">
+                    <a th:href="@{/login}" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Sign In
+                    </a>
+                </div>
+
+                <!-- Kitchen Staff Portal link -->
+                <a th:href="@{/admin/orders}" class="btn btn-dark btn-sm rounded-pill px-2 border-secondary text-secondary ms-1" title="Canteen Staff Kitchen Display">
+                    <i class="bi bi-fire text-warning"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+</body>
+</html>

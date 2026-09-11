@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Counter Display & Stock - Campus Canteen</title>
+    <!-- Bootstrap 5 CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body class="bg-light">
+
+<!-- Staff Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand fw-bold d-flex align-items-center" th:href="@{/admin/orders}">
+            <i class="bi bi-shop text-warning me-2 fs-4"></i>
+            <span>Campus Canteen <span class="badge bg-warning text-dark ms-1">Counter Stock Manager</span></span>
+        </a>
+
+        <div class="d-flex align-items-center gap-3">
+            <a th:href="@{/admin/orders}" class="btn btn-sm btn-outline-light">
+                <i class="bi bi-ticket-perforated me-1"></i>Token Handover Board
+            </a>
+            <a th:href="@{/admin/menu}" class="btn btn-sm btn-outline-light active">
+                <i class="bi bi-list-check me-1"></i>Prepared Counter Stock
+            </a>
+            <a th:href="@{/}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-box-arrow-up-right me-1"></i>Student View
+            </a>
+            <a th:href="@{/admin/logout}" class="btn btn-sm btn-danger">
+                <i class="bi bi-box-arrow-right me-1"></i>Logout
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid px-4 my-4">
+
+    <!-- Flash Messages -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i><span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${info}" class="alert alert-info alert-dismissible fade show rounded-4 shadow-sm" role="alert">
+        <i class="bi bi-info-circle-fill me-2"></i><span th:text="${info}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1 text-dark">Today's Counter Display & Stock</h2>
+            <p class="text-muted small mb-0">Control what is prepared and available on the display counter today. Dishes turned off cannot be ordered by students.</p>
+        </div>
+        <button class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#addFoodModal">
+            <i class="bi bi-plus-circle me-1"></i>Add New Prepared Dish
+        </button>
+    </div>
+
+    <!-- Food Items Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-4">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 table-hover">
+                <thead class="table-light small text-muted">
+                    <tr>
+                        <th scope="col" class="ps-4">Dish</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Diet</th>
+                        <th scope="col">Counter Location</th>
+                        <th scope="col">Price</th>
+                        <th scope="col" class="text-center">Counter Availability</th>
+                        <th scope="col" class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="food : ${foods}">
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <img th:src="@{/images/{img}(img=${food.image})}"
+                                     th:alt="${food.name}"
+                                     class="rounded-3 me-3"
+                                     style="width: 48px; height: 48px; object-fit: cover;"
+                                     onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&auto=format&fit=crop';">
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-dark" th:text="${food.name}">Name</h6>
+                                    <small class="text-muted text-truncate d-inline-block" style="max-width: 250px;" th:text="${food.description}">Description</small>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>
+                            <span class="badge bg-secondary-subtle text-secondary" th:text="${food.category}">Lunch</span>
+                        </td>
+
+                        <td>
+                            <span th:class="${food.veg} ? 'badge bg-success-subtle text-success' : 'badge bg-danger-subtle text-danger'"
+                                  th:text="${food.veg} ? 'Veg' : 'Non-Veg'">Veg</span>
+                        </td>
+
+                        <td class="small text-muted">
+                            <i class="bi bi-geo-alt me-1 text-primary"></i><span th:text="${food.counterLocation}">Hot Counter</span>
+                        </td>
+
+                        <td class="fw-bold text-dark">
+                            ₹<span th:text="${#numbers.formatDecimal(food.price, 1, 2)}">0.00</span>
+                        </td>
+
+                        <!-- 1-Click Counter Stock Toggle -->
+                        <td class="text-center">
+                            <form th:action="@{/admin/menu/toggle/{id}(id=${food.foodId})}" method="post" class="m-0 d-inline">
+                                <button type="submit" th:class="'btn btn-sm rounded-pill px-3 ' + (${food.available} ? 'btn-success' : 'btn-danger')"
+                                        title="Click to toggle Ready on Counter / Not Prepared Today">
+                                    <i th:class="'bi me-1 ' + (${food.available} ? 'bi-check-circle-fill' : 'bi-x-circle-fill')"></i>
+                                    <span th:text="${food.available} ? 'Ready on Counter (Click to Disable)' : 'Not Prepared Today (Click to Enable)'"></span>
+                                </button>
+                            </form>
+                        </td>
+
+                        <td class="text-end pe-4">
+                            <form th:action="@{/admin/menu/delete/{id}(id=${food.foodId})}" method="post" class="m-0 d-inline">
+                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill"
+                                        onclick="return confirm('Remove this dish from the counter menu?')" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal: Add New Prepared Food Dish -->
+<div class="modal fade" id="addFoodModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-plus-circle text-primary me-2"></i>Add Prepared Counter Dish</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/admin/menu/add}" method="post">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Dish Name *</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g., Veg Cutlet (2 Pcs)" required>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Category *</label>
+                            <select name="category" class="form-select" required>
+                                <option th:each="cat : ${categories}" th:value="${cat}" th:text="${cat}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Price (₹) *</label>
+                            <input type="number" step="0.5" name="price" class="form-control" placeholder="40.00" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Diet Type</label>
+                            <select name="veg" class="form-select">
+                                <option value="true">Vegetarian</option>
+                                <option value="false">Non-Vegetarian</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Counter Section</label>
+                            <input type="text" name="counterLocation" class="form-control" value="Hot Food Counter">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Description</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Serving portions, packaging info..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Image</label>
+                        <select name="image" class="form-select">
+                            <option value="veg-sandwich.jpg">veg-sandwich.jpg (Sandwich/Snack)</option>
+                            <option value="chicken-biryani.jpg">chicken-biryani.jpg (Biryani/Rice)</option>
+                            <option value="masala-dosa.jpg">masala-dosa.jpg (Dosa/South Indian)</option>
+                            <option value="veg-friedrice.jpg">veg-friedrice.jpg (Fried Rice)</option>
+                            <option value="tea.jpg">tea.jpg (Chai/Coffee/Drink)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="available" id="availSwitch" checked>
+                        <label class="form-check-label small fw-semibold" for="availSwitch">Mark as Prepared & Ready on Counter right now</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light">
+                    <button type="button" class="btn btn-secondary rounded-pill btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill btn-sm px-4 fw-bold">Save to Counter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
