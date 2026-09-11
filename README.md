@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🍔 Campus Canteen - Food Pre-ordering System
 
 A modern, responsive full-stack web application built in **Java (Spring Boot 3 + Thymeleaf)** that solves the problem of long, crowded college canteen queues during break hours.
@@ -89,3 +90,7 @@ If you prefer to use a local MySQL server instead of the embedded H2 database:
    spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
    ```
 4. Restart the application. Spring Boot will automatically create all tables and seed the initial dishes!
+=======
+# CampusCanteen
+java project
+>>>>>>> 111224e768659c32f1b4a538f0cb06a127b0f9b1
