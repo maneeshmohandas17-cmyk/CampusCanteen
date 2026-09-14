@@ -94,3 +94,4 @@ If you prefer to use a local MySQL server instead of the embedded H2 database:
 # CampusCanteen
 java project
 >>>>>>> 111224e768659c32f1b4a538f0cb06a127b0f9b1
+campus canteen management system
