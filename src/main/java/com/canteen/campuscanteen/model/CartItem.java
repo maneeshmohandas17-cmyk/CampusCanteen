@@ -4,13 +4,15 @@ public class CartItem {
 
     private Food food;
     private int quantity;
+    private String canteen;
 
     public CartItem() {
     }
 
-    public CartItem(Food food, int quantity) {
+    public CartItem(Food food, int quantity, String canteen) {
         this.food = food;
         this.quantity = quantity;
+        this.canteen = canteen;
     }
 
     public Food getFood() {
@@ -27,6 +29,10 @@ public class CartItem {
 
     public void setQuantity(int quantity) {
         this.quantity = quantity;
+    }
+
+    public String getCanteen() {
+        return canteen;
     }
 
     public double getSubtotal() {

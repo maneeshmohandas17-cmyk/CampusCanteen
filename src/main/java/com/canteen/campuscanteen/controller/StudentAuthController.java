@@ -1,6 +1,7 @@
 package com.canteen.campuscanteen.controller;
 
 import com.canteen.campuscanteen.model.Student;
+import com.canteen.campuscanteen.service.CanteenService;
 import com.canteen.campuscanteen.service.StudentService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
@@ -17,9 +18,11 @@ public class StudentAuthController {
     public static final String SESSION_STUDENT = "currentStudent";
 
     private final StudentService studentService;
+    private final CanteenService canteenService;
 
-    public StudentAuthController(StudentService studentService) {
+    public StudentAuthController(StudentService studentService, CanteenService canteenService) {
         this.studentService = studentService;
+        this.canteenService = canteenService;
     }
 
     @GetMapping("/login")
@@ -29,6 +32,7 @@ public class StudentAuthController {
             return "redirect:/menu";
         }
         model.addAttribute("redirect", redirect);
+        model.addAttribute("canteens", canteenService.getAllCanteenNames());
         return "login";
     }
 

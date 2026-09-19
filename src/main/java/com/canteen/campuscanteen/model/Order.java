@@ -27,6 +27,9 @@ public class Order {
     @Column(nullable = false)
     private String pickupTimeSlot;
 
+    @Column(nullable = false, columnDefinition = "varchar(255) default 'Canteen1'")
+    private String canteen = "Canteen1";
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus status = OrderStatus.READY_FOR_PICKUP;
@@ -40,7 +43,8 @@ public class Order {
     @Column(nullable = false)
     private double totalAmount;
 
-    private String specialInstructions;
+    @Column(name = "order_group_id")
+    private String orderGroupId;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<OrderItem> items = new ArrayList<>();
@@ -49,14 +53,13 @@ public class Order {
     }
 
     public Order(String tokenNumber, Student student, String pickupTimeSlot,
-                 String paymentMethod, String paymentStatus, String specialInstructions) {
+                 String paymentMethod, String paymentStatus) {
         this.tokenNumber = tokenNumber;
         this.student = student;
         this.orderTime = LocalDateTime.now();
         this.pickupTimeSlot = pickupTimeSlot;
         this.paymentMethod = paymentMethod;
         this.paymentStatus = paymentStatus;
-        this.specialInstructions = specialInstructions;
         this.status = OrderStatus.READY_FOR_PICKUP;
     }
 
@@ -105,6 +108,14 @@ public class Order {
         this.pickupTimeSlot = pickupTimeSlot;
     }
 
+    public String getCanteen() {
+        return canteen;
+    }
+
+    public void setCanteen(String canteen) {
+        this.canteen = canteen;
+    }
+
     public OrderStatus getStatus() {
         return status;
     }
@@ -137,20 +148,20 @@ public class Order {
         this.totalAmount = totalAmount;
     }
 
-    public String getSpecialInstructions() {
-        return specialInstructions;
-    }
-
-    public void setSpecialInstructions(String specialInstructions) {
-        this.specialInstructions = specialInstructions;
-    }
-
     public List<OrderItem> getItems() {
         return items;
     }
 
     public void setItems(List<OrderItem> items) {
         this.items = items;
+    }
+
+    public String getOrderGroupId() {
+        return orderGroupId;
+    }
+
+    public void setOrderGroupId(String orderGroupId) {
+        this.orderGroupId = orderGroupId;
     }
 
     public void addItem(OrderItem item) {

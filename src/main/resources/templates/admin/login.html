@@ -46,12 +46,25 @@
                             Sign In to Kitchen Board
                         </button>
 
-                        <div class="p-2 bg-light rounded-3 text-center mb-3">
-                            <small class="text-muted d-block mb-1">Testing Demo Staff:</small>
-                            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
-                                    onclick="document.getElementById('staffUser').value='admin'; document.getElementById('staffPass').value='admin123';">
-                                <i class="bi bi-magic me-1"></i>Fill Demo Staff
-                            </button>
+                        <div class="p-3 bg-light rounded-3 text-center mb-3">
+                            <small class="text-muted d-block mb-2 fw-bold text-uppercase" style="letter-spacing: 0.5px;">Canteen Staff Login Options:</small>
+                            <div class="d-grid gap-2">
+                                <div class="d-flex gap-1 justify-content-center flex-wrap" th:if="${canteens != null and !canteens.isEmpty()}">
+                                    <button type="button" th:each="c : ${canteens}"
+                                            class="btn btn-outline-primary btn-sm rounded-pill px-2 flex-fill"
+                                            th:data-canteen="${c}"
+                                            onclick="fillStaffLogin(this.getAttribute('data-canteen'), 'admin123')">
+                                        <i class="bi bi-shop me-1"></i><span th:text="${c}">Canteen</span>
+                                    </button>
+                                </div>
+                                <div th:if="${canteens == null or canteens.isEmpty()}" class="text-muted small py-1">
+                                    <em>No active canteens in system.</em>
+                                </div>
+                                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                                        onclick="fillStaffLogin('admin', 'admin123')">
+                                    <i class="bi bi-shield-lock me-1"></i>Central Admin (All Canteens)
+                                </button>
+                            </div>
                         </div>
 
                         <div class="text-center">
@@ -68,5 +81,11 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function fillStaffLogin(user, pass) {
+        document.getElementById('staffUser').value = user;
+        document.getElementById('staffPass').value = pass;
+    }
+</script>
 </body>
 </html>

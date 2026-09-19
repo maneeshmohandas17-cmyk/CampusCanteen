@@ -23,8 +23,6 @@ public class Student {
 
     private String phone;
 
-    private double walletBalance = 500.0; // Demo starting balance
-
     public Student() {
     }
 
@@ -35,7 +33,6 @@ public class Student {
         this.password = password;
         this.department = department;
         this.phone = phone;
-        this.walletBalance = 500.0;
     }
 
     public String getRollNumber() {
@@ -86,11 +83,4 @@ public class Student {
         this.phone = phone;
     }
 
-    public double getWalletBalance() {
-        return walletBalance;
-    }
-
-    public void setWalletBalance(double walletBalance) {
-        this.walletBalance = walletBalance;
-    }
 }

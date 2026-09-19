@@ -25,12 +25,24 @@
 
         <!-- Hero Section -->
         <div class="hero-banner">
+            <!-- Food image slideshow layers -->
+            <div class="hero-bg-slide active"  style="background-image: url('/images/chicken-biryani.jpg')"></div>
+            <div class="hero-bg-slide"         style="background-image: url('/images/masala-dosa.jpg')"></div>
+            <div class="hero-bg-slide"         style="background-image: url('/images/veg-friedrice.jpg')"></div>
+            <div class="hero-bg-slide"         style="background-image: url('/images/veg-sandwich.jpg')"></div>
+            <div class="hero-bg-slide"         style="background-image: url('/images/tea.jpg')"></div>
+            <div class="hero-bg-slide"         style="background-image: url('/images/filter-coffee.jpg')"></div>
+            <div class="hero-bg-slide"         style="background-image: url('/images/samosa.jpg')"></div>
+            <div class="hero-bg-slide"         style="background-image: url('/images/cold-coffee.jpg')"></div>
+            <div class="hero-bg-slide"         style="background-image: url('/images/paneer-butter-masala.jpg')"></div>
+            <div class="hero-bg-slide"         style="background-image: url('/images/chicken-burger.jpg')"></div>
+
             <div class="row align-items-center">
                 <div class="col-lg-7">
                     <span class="badge bg-dark text-warning px-3 py-2 rounded-pill mb-3 fw-bold">
-                        <i class="bi bi-lightning-charge-fill me-1"></i> Express Grab & Go Pre-orders
+                        <i class="bi bi-lightning-charge-fill me-1"></i> Express Grab &amp; Go Pre-orders
                     </span>
-                    <h1 class="display-4 fw-bold mb-3">Food Is Already Prepared. Just Reserve & Collect!</h1>
+                    <h1 class="display-4 fw-bold mb-3">Food Is Already Prepared. Just Reserve &amp; Collect!</h1>
                     <p class="lead mb-4 opacity-90">
                         No cooking delays! Our canteen displays freshly prepared meals and snacks ready in the hot counter. Reserve your dish before it sells out and collect it in seconds with your digital token.
                     </p>
@@ -166,5 +178,18 @@
 <div th:replace="~{fragments/footer :: footer}"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Hero background food image slideshow
+    (function () {
+        const slides = document.querySelectorAll('.hero-banner .hero-bg-slide');
+        if (!slides.length) return;
+        let current = 0;
+        setInterval(function () {
+            slides[current].classList.remove('active');
+            current = (current + 1) % slides.length;
+            slides[current].classList.add('active');
+        }, 4000);
+    })();
+</script>
 </body>
 </html>

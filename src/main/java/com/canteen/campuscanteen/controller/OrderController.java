@@ -2,6 +2,7 @@ package com.canteen.campuscanteen.controller;
 
 import com.canteen.campuscanteen.model.Cart;
 import com.canteen.campuscanteen.model.Order;
+import com.canteen.campuscanteen.model.OrderStatus;
 import com.canteen.campuscanteen.model.Student;
 import com.canteen.campuscanteen.service.CartService;
 import com.canteen.campuscanteen.service.OrderService;
@@ -36,9 +37,7 @@ public class OrderController {
     }
 
     @PostMapping("/order/place")
-    public String placeOrder(@RequestParam String pickupSlot,
-                             @RequestParam String paymentMethod,
-                             @RequestParam(required = false) String specialInstructions,
+    public String placeOrder(@RequestParam String paymentMethod,
                              HttpSession session,
                              RedirectAttributes redirectAttributes) {
 
@@ -55,18 +54,22 @@ public class OrderController {
         }
 
         try {
-            Order order = orderService.placeOrder(student, cart, pickupSlot, paymentMethod, specialInstructions);
+            List<Order> orders = orderService.placeOrders(student, cart, paymentMethod);
             cartService.clearCart(session);
-            // Refresh student in session with updated wallet balance if changed
-            session.setAttribute(StudentAuthController.SESSION_STUDENT, order.getStudent());
+            session.setAttribute(StudentAuthController.SESSION_STUDENT, student);
+
+            Order firstOrder = orders.get(0);
+            if (orders.size() > 1) {
+                redirectAttributes.addFlashAttribute("info", "Your cart has been split into " + orders.size() + " canteen-specific orders.");
+            }
 
             // Online payment methods must be settled at the mock gateway before the token is confirmed
-            if (order.getStatus() == com.canteen.campuscanteen.model.OrderStatus.AWAITING_PAYMENT) {
-                return "redirect:/payment/" + order.getTokenNumber();
+            if (firstOrder.getStatus() == com.canteen.campuscanteen.model.OrderStatus.AWAITING_PAYMENT) {
+                return "redirect:/payment/" + firstOrder.getTokenNumber();
             }
 
             redirectAttributes.addFlashAttribute("orderSuccess", true);
-            return "redirect:/order/" + order.getTokenNumber();
+            return "redirect:/order/" + firstOrder.getTokenNumber();
 
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
@@ -86,8 +89,34 @@ public class OrderController {
             return "error-page";
         }
 
-        model.addAttribute("order", orderOpt.get());
+        Order order = orderOpt.get();
+        if (order.getStatus() == OrderStatus.AWAITING_PAYMENT) {
+            return "redirect:/payment/" + order.getTokenNumber();
+        }
+
+        model.addAttribute("order", order);
+        if (order.getOrderGroupId() != null && !order.getOrderGroupId().isEmpty()) {
+            List<Order> groupOrders = orderService.getOrdersByGroupId(order.getOrderGroupId());
+            model.addAttribute("groupOrders", groupOrders);
+        } else {
+            model.addAttribute("groupOrders", List.of(order));
+        }
         return "order-status";
+    }
+
+    @GetMapping("/order/{token}/print")
+    public String printToken(@PathVariable String token,
+                             HttpSession session,
+                             Model model) {
+        Optional<Order> orderOpt = orderService.getOrderByToken(token);
+        if (orderOpt.isEmpty()) {
+            model.addAttribute("errorMessage", "Order with token " + token + " not found!");
+            return "error-page";
+        }
+
+        Order order = orderOpt.get();
+        model.addAttribute("order", order);
+        return "print-token";
     }
 
     @GetMapping("/orders")

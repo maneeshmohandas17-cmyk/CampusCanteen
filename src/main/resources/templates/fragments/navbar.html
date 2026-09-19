@@ -44,9 +44,7 @@
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                         <li class="dropdown-header">
                             <strong th:text="${currentStudent.name}">Name</strong><br>
-                            <small class="text-muted" th:text="'Roll: ' + ${currentStudent.rollNumber}">Roll</small><br>
-                            <span class="badge bg-success-subtle text-success mt-1"
-                                  th:text="'Wallet: ₹' + ${#numbers.formatDecimal(currentStudent.walletBalance, 1, 2)}">₹500.00</span>
+                            <small class="text-muted" th:text="'Roll: ' + ${currentStudent.rollNumber}">Roll</small>
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" th:href="@{/orders}"><i class="bi bi-receipt me-2"></i>My Orders</a></li>

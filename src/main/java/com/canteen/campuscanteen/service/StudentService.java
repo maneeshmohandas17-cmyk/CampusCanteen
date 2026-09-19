@@ -40,10 +40,6 @@ public class StudentService {
             throw new IllegalArgumentException("Email is already registered. Please log in.");
         }
 
-        if (student.getWalletBalance() <= 0) {
-            student.setWalletBalance(500.0);
-        }
-
         return studentRepository.save(student);
     }
 

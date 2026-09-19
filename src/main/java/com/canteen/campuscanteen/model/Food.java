@@ -1,6 +1,8 @@
 package com.canteen.campuscanteen.model;
 
 import jakarta.persistence.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "foods")
@@ -27,6 +29,11 @@ public class Food {
     private boolean isVeg = true;
 
     private String counterLocation = "Hot Display Counter";
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "food_canteens", joinColumns = @JoinColumn(name = "food_id"))
+    @Column(name = "canteen_name")
+    private Set<String> canteens = new LinkedHashSet<>();
 
     // Indicates whether this dish is currently prepared and ready on display today
     private boolean available = true;
@@ -108,6 +115,26 @@ public class Food {
 
     public void setCounterLocation(String counterLocation) {
         this.counterLocation = counterLocation;
+    }
+
+    public Set<String> getCanteens() {
+        return canteens;
+    }
+
+    public void setCanteens(Set<String> canteens) {
+        this.canteens = new LinkedHashSet<>();
+        if (canteens != null) {
+            this.canteens.addAll(canteens);
+        }
+    }
+
+    public boolean isAvailableInCanteen(String canteen) {
+        return canteens != null && canteens.contains(canteen);
+    }
+
+    public boolean hasAnyActiveCanteen(java.util.Collection<String> activeCanteens) {
+        if (canteens == null || activeCanteens == null || canteens.isEmpty()) return false;
+        return canteens.stream().anyMatch(activeCanteens::contains);
     }
 
     public boolean isAvailable() {

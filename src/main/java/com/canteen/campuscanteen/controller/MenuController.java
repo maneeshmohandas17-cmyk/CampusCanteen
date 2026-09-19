@@ -3,6 +3,7 @@ package com.canteen.campuscanteen.controller;
 import com.canteen.campuscanteen.model.Cart;
 import com.canteen.campuscanteen.model.Food;
 import com.canteen.campuscanteen.model.Student;
+import com.canteen.campuscanteen.service.CanteenService;
 import com.canteen.campuscanteen.service.CartService;
 import com.canteen.campuscanteen.service.FoodService;
 import jakarta.servlet.http.HttpSession;
@@ -19,10 +20,12 @@ public class MenuController {
 
     private final FoodService foodService;
     private final CartService cartService;
+    private final CanteenService canteenService;
 
-    public MenuController(FoodService foodService, CartService cartService) {
+    public MenuController(FoodService foodService, CartService cartService, CanteenService canteenService) {
         this.foodService = foodService;
         this.cartService = cartService;
+        this.canteenService = canteenService;
     }
 
     private void addCommonAttributes(HttpSession session, Model model) {
@@ -30,6 +33,7 @@ public class MenuController {
         model.addAttribute("cartCount", cart.getTotalCount());
         Student student = (Student) session.getAttribute(StudentAuthController.SESSION_STUDENT);
         model.addAttribute("currentStudent", student);
+        model.addAttribute("canteens", canteenService.getAllCanteenNames());
     }
 
     @GetMapping("/")
@@ -44,12 +48,15 @@ public class MenuController {
 
     @GetMapping("/menu")
     public String menu(@RequestParam(required = false) String category,
+                       @RequestParam(required = false) String canteen,
                        @RequestParam(required = false) String search,
                        @RequestParam(required = false, defaultValue = "false") boolean vegOnly,
                        HttpSession session,
                        Model model) {
 
         addCommonAttributes(session, model);
+
+        List<String> canteenNames = canteenService.getAllCanteenNames();
 
         List<Food> foods;
         if (search != null && !search.trim().isEmpty()) {
@@ -60,12 +67,20 @@ public class MenuController {
             foods = foodService.getAllFood();
         }
 
+        if (canteen != null && !canteen.equalsIgnoreCase("All") && !canteen.trim().isEmpty()
+                && canteenService.isValidCanteen(canteen)) {
+            foods = foods.stream().filter(f -> f.getCanteens() != null && f.getCanteens().contains(canteen))
+                    .collect(Collectors.toList());
+        }
+
         if (vegOnly) {
             foods = foods.stream().filter(Food::isVeg).collect(Collectors.toList());
         }
 
         model.addAttribute("foods", foods);
         model.addAttribute("categories", foodService.getAllCategories());
+        model.addAttribute("canteens", canteenNames);
+        model.addAttribute("selectedCanteen", (canteen != null && canteenService.isValidCanteen(canteen)) ? canteen : "All");
         model.addAttribute("selectedCategory", category != null ? category : "All");
         model.addAttribute("searchQuery", search != null ? search : "");
         model.addAttribute("vegOnly", vegOnly);

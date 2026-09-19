@@ -18,15 +18,24 @@
     <div class="container-fluid px-4">
         <a class="navbar-brand fw-bold d-flex align-items-center" th:href="@{/admin/orders}">
             <i class="bi bi-shop text-warning me-2 fs-4"></i>
-            <span>Campus Canteen <span class="badge bg-warning text-dark ms-1">Counter Token Board</span></span>
+            <span>Campus Canteen 
+                <span th:if="${staffCanteen != null}" class="badge bg-warning text-dark ms-1" th:text="${staffCanteen + ' Counter Board'}">Canteen1 Board</span>
+                <span th:unless="${staffCanteen != null}" class="badge bg-warning text-dark ms-1">Counter Token Board</span>
+            </span>
         </a>
 
         <div class="d-flex align-items-center gap-3">
+            <span th:if="${staffCanteen != null}" class="badge bg-primary text-white py-2 px-3 rounded-pill">
+                <i class="bi bi-shop me-1"></i><span th:text="${staffCanteen}">Canteen1</span> Counter
+            </span>
             <a th:href="@{/admin/orders}" class="btn btn-sm btn-outline-light active">
                 <i class="bi bi-ticket-perforated me-1"></i>Token Handover Board
             </a>
             <a th:href="@{/admin/menu}" class="btn btn-sm btn-outline-light">
                 <i class="bi bi-list-check me-1"></i>Prepared Counter Stock
+            </a>
+            <a th:if="${staffCanteen == null}" th:href="@{/admin/canteens}" class="btn btn-sm btn-warning text-dark fw-bold">
+                <i class="bi bi-building-add me-1"></i>Manage Canteens
             </a>
             <a th:href="@{/}" target="_blank" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-box-arrow-up-right me-1"></i>Student View
@@ -48,6 +57,15 @@
     <div th:if="${error}" class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm" role="alert">
         <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${error}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Canteen Notice for Staff -->
+    <div th:if="${staffCanteen != null}" class="alert alert-primary border-0 shadow-sm rounded-4 py-2 px-3 mb-3 d-flex align-items-center justify-content-between">
+        <div>
+            <i class="bi bi-shop fs-5 me-2"></i>
+            <strong>Dedicated Display:</strong> You are managing orders specifically for <span class="badge bg-dark fs-6" th:text="${staffCanteen}">Canteen1</span>. Only food items ordered from this canteen appear on this board.
+        </div>
+        <span class="badge bg-white text-primary fw-bold" th:text="${staffCanteen}">Canteen1</span>
     </div>
 
     <!-- Summary KPI Cards -->
@@ -88,7 +106,7 @@
                     <div>
                         <small class="text-muted text-uppercase fw-bold">Total Sales (Today)</small>
                         <h3 class="fw-bold mb-0 text-primary">₹<span th:text="${#numbers.formatDecimal(totalRevenue, 1, 0)}">0</span></h3>
-                        <small class="text-muted">Total pre-ordered revenue</small>
+                        <small class="text-muted" th:text="${selectedCanteen != 'ALL' ? selectedCanteen + ' pre-ordered revenue' : 'Total pre-ordered revenue'}">Pre-ordered revenue</small>
                     </div>
                     <div class="rounded-circle bg-primary-subtle text-primary p-3">
                         <i class="bi bi-cash-stack fs-3"></i>
@@ -102,23 +120,29 @@
     <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
             <div class="d-flex flex-wrap gap-2">
-                <a th:href="@{/admin/orders}"
+                <a th:href="@{/admin/orders(canteen=${selectedCanteen != 'ALL' ? selectedCanteen : null})}"
                    th:class="'btn btn-sm rounded-pill ' + (${currentFilter == 'ALL'} ? 'btn-dark' : 'btn-outline-secondary')">
                     All Tokens (<span th:text="${totalOrders}">0</span>)
                 </a>
-                <a th:href="@{/admin/orders(filter='READY_FOR_PICKUP')}"
+                <a th:href="@{/admin/orders(filter='READY_FOR_PICKUP', canteen=${selectedCanteen != 'ALL' ? selectedCanteen : null})}"
                    th:class="'btn btn-sm rounded-pill ' + (${currentFilter == 'READY_FOR_PICKUP'} ? 'btn-success' : 'btn-outline-success')">
                     <i class="bi bi-bell-fill me-1"></i>Waiting for Pickup (<span th:text="${readyCount}">0</span>)
                 </a>
-                <a th:href="@{/admin/orders(filter='COMPLETED')}"
+                <a th:href="@{/admin/orders(filter='COMPLETED', canteen=${selectedCanteen != 'ALL' ? selectedCanteen : null})}"
                    th:class="'btn btn-sm rounded-pill ' + (${currentFilter == 'COMPLETED'} ? 'btn-secondary' : 'btn-outline-secondary')">
                     <i class="bi bi-check2-all me-1"></i>Collected (<span th:text="${completedCount}">0</span>)
                 </a>
             </div>
 
+            <!-- Canteen Switcher: only shown if central admin -->
+            <div class="d-flex flex-wrap gap-2" th:if="${staffCanteen == null}">
+                <a th:href="@{/admin/orders(filter=${currentFilter})}" th:class="'btn btn-sm rounded-pill ' + (${selectedCanteen == 'ALL'} ? 'btn-primary' : 'btn-outline-primary')">All Canteens</a>
+                <a th:each="canteen : ${canteens}" th:href="@{/admin/orders(filter=${currentFilter}, canteen=${canteen})}" th:class="'btn btn-sm rounded-pill ' + (${selectedCanteen == canteen} ? 'btn-primary' : 'btn-outline-primary')" th:text="${canteen}">Canteen1</a>
+            </div>
+
             <div class="d-flex align-items-center gap-2">
                 <span class="text-muted small"><i class="bi bi-arrow-repeat me-1"></i>Auto-refreshes every 12s</span>
-                <a th:href="@{/admin/orders}" class="btn btn-sm btn-outline-dark rounded-pill">
+                <a th:href="@{/admin/orders(filter=${currentFilter}, canteen=${selectedCanteen != 'ALL' ? selectedCanteen : null})}" class="btn btn-sm btn-outline-dark rounded-pill">
                     <i class="bi bi-arrow-clockwise"></i> Refresh
                 </a>
             </div>
@@ -133,10 +157,15 @@
                 <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                     <div>
                         <span class="fs-3 fw-bold font-monospace text-primary" th:text="${ord.tokenNumber}">#TK-101</span>
+                        <span class="badge bg-primary text-white fs-6 ms-2"><i class="bi bi-shop me-1"></i><span th:text="${ord.canteen}">Canteen1</span></span>
                     </div>
-                    <span th:if="${ord.status.name() == 'READY_FOR_PICKUP' or ord.status.name() == 'CONFIRMED' or ord.status.name() == 'PENDING'}"
+                    <span th:if="${ord.status.name() == 'READY_FOR_PICKUP' or ord.status.name() == 'CONFIRMED'}"
                           class="badge bg-success text-white px-3 py-2 rounded-pill">
                         <i class="bi bi-bell-fill me-1"></i>Ready for Handover
+                    </span>
+                    <span th:if="${ord.status.name() == 'AWAITING_PAYMENT'}"
+                          class="badge bg-warning text-dark px-3 py-2 rounded-pill">
+                        <i class="bi bi-hourglass-split me-1"></i>Payment Pending
                     </span>
                     <span th:if="${ord.status.name() == 'COMPLETED'}"
                           class="badge bg-secondary px-3 py-2 rounded-pill">
@@ -156,20 +185,10 @@
                             <span class="text-muted">Student:</span>
                             <strong class="text-dark" th:text="${ord.student.name} + ' (' + ${ord.student.rollNumber} + ')'">Alex Morgan</strong>
                         </div>
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">Pickup Recess Slot:</span>
-                            <strong class="text-primary" th:text="${ord.pickupTimeSlot}">10:45 AM Break</strong>
-                        </div>
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">Reserved Time:</span>
                             <span class="text-muted" th:text="${ord.formattedOrderTime}">12:30 PM</span>
                         </div>
-                    </div>
-
-                    <!-- Pickup Note if any -->
-                    <div th:if="${ord.specialInstructions != null and !ord.specialInstructions.empty}"
-                         class="alert alert-warning py-1 px-2 small rounded-3 mb-3">
-                        <i class="bi bi-chat-dots-fill me-1"></i><strong>Note:</strong> <span th:text="${ord.specialInstructions}"></span>
                     </div>
 
                     <!-- Dishes to Hand Over -->
@@ -189,7 +208,7 @@
                     <div class="d-flex justify-content-between align-items-center pt-2 border-top">
                         <span class="small text-muted">
                             Payment: <strong th:text="${ord.paymentMethod}">COUNTER</strong>
-                            (<span th:class="${ord.paymentStatus == 'PAID'} ? 'text-success fw-bold' : 'text-danger fw-bold'"
+                            (<span th:class="${ord.paymentStatus == 'PAID'} ? 'text-success fw-bold' : (${ord.paymentStatus == 'FAILED'} ? 'text-danger fw-bold' : 'text-warning fw-bold')"
                                    th:text="${ord.paymentStatus}">PENDING</span>)
                         </span>
                         <span class="fw-bold text-dark fs-5">₹<span th:text="${#numbers.formatDecimal(ord.totalAmount, 1, 2)}">0.00</span></span>
@@ -198,8 +217,21 @@
 
                 <!-- Card Footer: Fast Handover Button -->
                 <div class="card-footer bg-light p-3 border-top">
+                    <!-- Awaiting Payment State -->
+                    <div th:if="${ord.status.name() == 'AWAITING_PAYMENT'}" class="d-flex gap-2">
+                        <button type="button" class="btn btn-warning w-100 btn-sm rounded-pill fw-bold py-2 text-dark" disabled>
+                            <i class="bi bi-hourglass-split me-1"></i>Awaiting Online Payment
+                        </button>
+                        <form th:action="@{/admin/orders/{id}/status(id=${ord.orderId})}" method="post">
+                            <input type="hidden" name="newStatus" value="CANCELLED">
+                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill" onclick="return confirm('Cancel this unpaid reservation?')">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </form>
+                    </div>
+
                     <!-- If Waiting for pickup: 1-click Hand Over -->
-                    <div th:if="${ord.status.name() != 'COMPLETED' and ord.status.name() != 'CANCELLED'}" class="d-flex gap-2">
+                    <div th:if="${ord.status.name() == 'READY_FOR_PICKUP' or ord.status.name() == 'CONFIRMED'}" class="d-flex gap-2">
                         <form th:action="@{/admin/orders/{id}/status(id=${ord.orderId})}" method="post" class="flex-grow-1">
                             <input type="hidden" name="newStatus" value="COMPLETED">
                             <button type="submit" class="btn btn-success w-100 btn-sm rounded-pill fw-bold py-2">

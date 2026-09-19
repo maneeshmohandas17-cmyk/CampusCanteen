@@ -2,12 +2,16 @@ package com.canteen.campuscanteen.service;
 
 import com.canteen.campuscanteen.model.*;
 import com.canteen.campuscanteen.repository.OrderRepository;
-import com.canteen.campuscanteen.repository.StudentRepository;
+import com.canteen.campuscanteen.service.CanteenService;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -15,22 +19,46 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final StudentRepository studentRepository;
+    private final CanteenService canteenService;
     private static final AtomicInteger TOKEN_COUNTER = new AtomicInteger(100);
 
-    public OrderService(OrderRepository orderRepository, StudentRepository studentRepository) {
+    public OrderService(OrderRepository orderRepository, CanteenService canteenService) {
         this.orderRepository = orderRepository;
-        this.studentRepository = studentRepository;
+        this.canteenService = canteenService;
+    }
+
+    @PostConstruct
+    public void initTokenCounter() {
+        int max = 100;
+        try {
+            List<Order> orders = orderRepository.findAll();
+            for (Order o : orders) {
+                String tok = o.getTokenNumber();
+                if (tok != null && tok.toUpperCase().startsWith("TK-")) {
+                    try {
+                        int num = Integer.parseInt(tok.substring(3).trim());
+                        if (num > max) {
+                            max = num;
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        } catch (Exception ignored) {}
+        TOKEN_COUNTER.set(max);
     }
 
     public synchronized String generateTokenNumber() {
-        int next = TOKEN_COUNTER.incrementAndGet();
-        return "TK-" + next;
+        while (true) {
+            int next = TOKEN_COUNTER.incrementAndGet();
+            String candidate = "TK-" + next;
+            if (orderRepository.findByTokenNumber(candidate).isEmpty()) {
+                return candidate;
+            }
+        }
     }
 
     @Transactional
-    public Order placeOrder(Student student, Cart cart, String pickupSlot,
-                           String paymentMethod, String specialInstructions) {
+    public List<Order> placeOrders(Student student, Cart cart, String paymentMethod) {
         if (cart == null || cart.isEmpty()) {
             throw new IllegalArgumentException("Cannot reserve with an empty tray");
         }
@@ -46,48 +74,37 @@ public class OrderService {
             }
         }
 
-        double total = cart.getTotalAmount();
         boolean isOnlineGateway = "UPI_ONLINE".equalsIgnoreCase(paymentMethod) || "CARD_ONLINE".equalsIgnoreCase(paymentMethod);
 
-        // Handle wallet payment (deducted immediately - it's already the student's own balance)
-        String paymentStatus;
-        OrderStatus initialStatus;
-        if ("STUDENT_WALLET".equalsIgnoreCase(paymentMethod)) {
-            if (student.getWalletBalance() < total) {
-                throw new IllegalArgumentException("Insufficient wallet balance. Please choose another payment method.");
-            }
-            student.setWalletBalance(student.getWalletBalance() - total);
-            studentRepository.save(student);
-            paymentStatus = "PAID";
-            initialStatus = OrderStatus.READY_FOR_PICKUP; // food is pre-prepared
-        } else if (isOnlineGateway) {
-            // Held at the payment gateway step until the student completes the mock checkout
-            paymentStatus = "PENDING_PAYMENT";
-            initialStatus = OrderStatus.AWAITING_PAYMENT;
-        } else {
-            paymentStatus = "PAY_ON_PICKUP";
-            initialStatus = OrderStatus.READY_FOR_PICKUP; // food is pre-prepared
-        }
-
-        String token = generateTokenNumber();
-
-        Order order = new Order();
-        order.setTokenNumber(token);
-        order.setStudent(student);
-        order.setOrderTime(LocalDateTime.now());
-        order.setPickupTimeSlot(pickupSlot != null && !pickupSlot.trim().isEmpty() ? pickupSlot : "Immediate Pickup");
-        order.setStatus(initialStatus);
-        order.setPaymentMethod(paymentMethod != null ? paymentMethod : "PAY_AT_COUNTER");
-        order.setPaymentStatus(paymentStatus);
-        order.setTotalAmount(total);
-        order.setSpecialInstructions(specialInstructions != null ? specialInstructions.trim() : "");
-
+        Map<String, List<CartItem>> itemsByCanteen = new LinkedHashMap<>();
         for (CartItem item : cart.getItems()) {
-            OrderItem orderItem = new OrderItem(order, item.getFood(), item.getQuantity(), item.getFood().getPrice());
-            order.addItem(orderItem);
+            if (!canteenService.isValidCanteen(item.getCanteen()) || !item.getFood().getCanteens().contains(item.getCanteen())) {
+                throw new IllegalArgumentException("Sorry, canteen '" + item.getCanteen() + "' is not active or has been removed from the system.");
+            }
+            itemsByCanteen.computeIfAbsent(item.getCanteen(), ignored -> new ArrayList<>()).add(item);
         }
 
-        return orderRepository.save(order);
+        List<Order> orders = new ArrayList<>();
+        String groupId = "GRP-" + System.currentTimeMillis();
+        for (Map.Entry<String, List<CartItem>> entry : itemsByCanteen.entrySet()) {
+            Order order = new Order();
+            order.setTokenNumber(generateTokenNumber());
+            order.setOrderGroupId(groupId);
+            order.setStudent(student);
+            order.setCanteen(entry.getKey());
+            order.setOrderTime(LocalDateTime.now());
+            order.setPickupTimeSlot("Immediate Pickup");
+            order.setStatus(isOnlineGateway ? OrderStatus.AWAITING_PAYMENT : OrderStatus.READY_FOR_PICKUP);
+            order.setPaymentMethod(paymentMethod != null ? paymentMethod : "PAY_AT_COUNTER");
+            order.setPaymentStatus(isOnlineGateway ? "PENDING_PAYMENT" : "PAY_ON_PICKUP");
+            order.setTotalAmount(entry.getValue().stream().mapToDouble(CartItem::getSubtotal).sum());
+
+            for (CartItem item : entry.getValue()) {
+                order.addItem(new OrderItem(order, item.getFood(), item.getQuantity(), item.getFood().getPrice()));
+            }
+            orders.add(orderRepository.save(order));
+        }
+        return orders;
     }
 
     /**
@@ -96,22 +113,58 @@ public class OrderService {
      */
     @Transactional
     public Order settleOnlinePayment(String tokenNumber, boolean success) {
+        return settleOnlinePayment(tokenNumber, success, null);
+    }
+
+    @Transactional
+    public Order settleOnlinePayment(String tokenNumber, boolean success, String paymentMethod) {
         Order order = orderRepository.findByTokenNumber(tokenNumber.trim().toUpperCase())
                 .orElseThrow(() -> new IllegalArgumentException("Order not found for token: " + tokenNumber));
 
-        if (order.getStatus() != OrderStatus.AWAITING_PAYMENT) {
-            // Already settled (e.g. page refreshed/back button) - just return as-is
-            return order;
+        List<Order> targetOrders;
+        if (order.getOrderGroupId() != null && !order.getOrderGroupId().isEmpty()) {
+            targetOrders = orderRepository.findByOrderGroupId(order.getOrderGroupId());
+        } else {
+            targetOrders = List.of(order);
         }
 
-        if (success) {
-            order.setPaymentStatus("PAID");
-            order.setStatus(OrderStatus.READY_FOR_PICKUP); // food is pre-prepared
-        } else {
-            order.setPaymentStatus("FAILED");
-            // Leave status as AWAITING_PAYMENT so the student can retry the same order/token
+        for (Order o : targetOrders) {
+            if (o.getStatus() == OrderStatus.AWAITING_PAYMENT) {
+                if (paymentMethod != null && !paymentMethod.trim().isEmpty()) {
+                    o.setPaymentMethod(paymentMethod.trim().toUpperCase());
+                }
+                if (success) {
+                    o.setPaymentStatus("PAID");
+                    o.setStatus(OrderStatus.READY_FOR_PICKUP);
+                } else {
+                    o.setPaymentStatus("FAILED");
+                }
+                orderRepository.save(o);
+            }
         }
-        return orderRepository.save(order);
+        return orderRepository.findByTokenNumber(tokenNumber.trim().toUpperCase()).orElse(order);
+    }
+
+    @Transactional
+    public Order cancelOrder(String tokenNumber) {
+        Order order = orderRepository.findByTokenNumber(tokenNumber.trim().toUpperCase())
+                .orElseThrow(() -> new IllegalArgumentException("Order not found for token: " + tokenNumber));
+
+        List<Order> targetOrders;
+        if (order.getOrderGroupId() != null && !order.getOrderGroupId().isEmpty()) {
+            targetOrders = orderRepository.findByOrderGroupId(order.getOrderGroupId());
+        } else {
+            targetOrders = List.of(order);
+        }
+
+        for (Order o : targetOrders) {
+            if (o.getStatus() == OrderStatus.AWAITING_PAYMENT) {
+                o.setStatus(OrderStatus.CANCELLED);
+                o.setPaymentStatus("CANCELLED");
+                orderRepository.save(o);
+            }
+        }
+        return orderRepository.findByTokenNumber(tokenNumber.trim().toUpperCase()).orElse(order);
     }
 
     public Optional<Order> getOrderByToken(String tokenNumber) {
@@ -131,6 +184,10 @@ public class OrderService {
         return orderRepository.findAllByOrderByOrderTimeDesc();
     }
 
+    public List<Order> getOrdersByCanteen(String canteen) {
+        return orderRepository.findByCanteenOrderByOrderTimeDesc(canteen);
+    }
+
     public List<Order> getOrdersByStatus(OrderStatus status) {
         return orderRepository.findByStatusOrderByOrderTimeAsc(status);
     }
@@ -146,15 +203,36 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    public List<Order> getOrdersByGroupId(String orderGroupId) {
+        if (orderGroupId == null || orderGroupId.isEmpty()) return List.of();
+        return orderRepository.findByOrderGroupId(orderGroupId);
+    }
+
+    public List<Order> getOrdersByCanteenAndStatus(String canteen, OrderStatus status) {
+        return orderRepository.findByCanteenAndStatusOrderByOrderTimeAsc(canteen, status);
+    }
+
     public long getCountByStatus(OrderStatus status) {
         return orderRepository.countByStatus(status);
+    }
+
+    public long getCountByStatusAndCanteen(OrderStatus status, String canteen) {
+        return orderRepository.countByStatusAndCanteen(status, canteen);
     }
 
     public double getTotalRevenue() {
         return orderRepository.calculateTotalRevenue();
     }
 
+    public double getTotalRevenueByCanteen(String canteen) {
+        return orderRepository.calculateTotalRevenueByCanteen(canteen);
+    }
+
     public long getValidOrderCount() {
         return orderRepository.countValidOrders();
+    }
+
+    public long getValidOrderCountByCanteen(String canteen) {
+        return orderRepository.countValidOrdersByCanteen(canteen);
     }
 }

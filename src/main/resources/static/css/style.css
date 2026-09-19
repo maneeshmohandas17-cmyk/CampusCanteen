@@ -73,14 +73,51 @@ body {
     transform: scale(1.03);
 }
 
-/* Hero Section */
+/* Hero Section — animated food image slideshow background */
 .hero-banner {
-    background: linear-gradient(135deg, #ea580c 0%, #f97316 60%, #fb923c 100%);
+    position: relative;
     color: #ffffff;
     border-radius: 1.5rem;
     padding: 3.5rem 2.5rem;
-    box-shadow: 0 10px 25px -5px rgba(249, 115, 22, 0.3);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
     margin-bottom: 2.5rem;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+/* Each slide layer is stacked; only the active one is visible */
+.hero-banner .hero-bg-slide {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: inherit;
+    z-index: -2;
+    opacity: 0;
+    transition: opacity 1.2s ease-in-out;
+    transform: scale(1.05);
+    transition: opacity 1.2s ease-in-out, transform 8s ease-in-out;
+}
+
+.hero-banner .hero-bg-slide.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Dark gradient overlay so text stays readable over any food photo */
+.hero-banner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+        120deg,
+        rgba(10, 10, 20, 0.72) 0%,
+        rgba(10, 10, 20, 0.55) 55%,
+        rgba(10, 10, 20, 0.30) 100%
+    );
+    z-index: -1;
 }
 
 /* Category Filter Pills */
@@ -213,8 +250,8 @@ body {
 
 .food-footer {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 0.6rem;
     padding-top: 0.8rem;
     border-top: 1px dashed var(--border-color);
 }
@@ -367,4 +404,56 @@ body {
     color: #94a3b8;
     padding: 2.5rem 0 1.5rem 0;
     margin-top: 4rem;
+}
+
+/* =========================================================
+   Print Stylesheet for Order Tokens
+   ========================================================= */
+@media print {
+    body {
+        background: #ffffff !important;
+        color: #111827 !important;
+        font-size: 12pt;
+    }
+
+    /* Hide extraneous web navigation & buttons */
+    nav, footer, .no-print, .btn, .btn-close, .alert-dismissible .btn-close,
+    .status-tracker, .navbar-canteen, .footer-canteen {
+        display: none !important;
+    }
+
+    .main-container {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .token-card, .card {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        page-break-inside: avoid;
+    }
+
+    .token-number {
+        font-size: 2.8rem !important;
+        color: #000000 !important;
+        font-weight: 900 !important;
+        margin: 0.5rem 0 !important;
+    }
+
+    .badge {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+        background: transparent !important;
+    }
+
+    .table {
+        color: #000000 !important;
+    }
 }

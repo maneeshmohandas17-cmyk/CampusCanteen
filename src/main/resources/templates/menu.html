@@ -41,14 +41,30 @@
             <div class="col-md-5">
                 <form th:action="@{/menu}" method="get" class="d-flex gap-2">
                     <input type="hidden" name="category" th:value="${selectedCategory}">
+                    <input type="hidden" name="canteen" th:value="${selectedCanteen}">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
                         <input type="text" name="search" class="form-control border-start-0"
-                               placeholder="Search ready dishes (e.g. Biryani, Dosa)..."
-                               th:value="${searchQuery}">
+                                placeholder="Search ready dishes (e.g. Biryani, Dosa)..."
+                                th:value="${searchQuery}">
                         <button class="btn btn-primary" type="submit">Search</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Canteen Filter Pills -->
+        <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="small fw-bold text-dark me-2"><i class="bi bi-shop me-1 text-primary"></i>Select Canteen:</span>
+                <a th:href="@{/menu(category=${selectedCategory}, canteen='All', vegOnly=${vegOnly}, search=${searchQuery})}"
+                   th:class="'btn btn-sm rounded-pill px-3 ' + (${selectedCanteen == 'All' or selectedCanteen == null} ? 'btn-primary text-white fw-bold shadow-sm' : 'btn-outline-secondary')">
+                    All Canteens
+                </a>
+                <a th:each="c : ${canteens}"
+                   th:href="@{/menu(category=${selectedCategory}, canteen=${c}, vegOnly=${vegOnly}, search=${searchQuery})}"
+                   th:class="'btn btn-sm rounded-pill px-3 ' + (${selectedCanteen == c} ? 'btn-primary text-white fw-bold shadow-sm' : 'btn-outline-secondary')"
+                   th:text="${c}">Canteen1</a>
             </div>
         </div>
 
@@ -57,12 +73,12 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                 <!-- Category Pills -->
                 <div class="d-flex flex-wrap gap-2">
-                    <a th:href="@{/menu(category='All', vegOnly=${vegOnly})}"
+                    <a th:href="@{/menu(category='All', canteen=${selectedCanteen}, vegOnly=${vegOnly})}"
                        th:class="'category-pill ' + (${selectedCategory == 'All' or selectedCategory == null} ? 'active' : '')">
                         All Items
                     </a>
                     <a th:each="cat : ${categories}"
-                       th:href="@{/menu(category=${cat}, vegOnly=${vegOnly})}"
+                       th:href="@{/menu(category=${cat}, canteen=${selectedCanteen}, vegOnly=${vegOnly})}"
                        th:class="'category-pill ' + (${selectedCategory == cat} ? 'active' : '')"
                        th:text="${cat}">Category</a>
                 </div>
@@ -117,22 +133,50 @@
                         <h5 class="food-title" th:text="${food.name}">Dish Name</h5>
                         <p class="food-desc" th:text="${food.description}">Description</p>
 
-                        <div class="food-footer">
+                        <!-- Available Canteens Badges -->
+                        <div class="mb-2">
+                            <small class="text-muted d-block mb-1"><i class="bi bi-shop me-1 text-primary"></i>Available at:</small>
+                            <div class="d-flex flex-wrap gap-1">
+                                <span th:each="cName : ${food.canteens}"
+                                      th:if="${canteens.contains(cName)}"
+                                      class="badge bg-primary-subtle text-primary border border-primary-subtle"
+                                      th:text="${cName}">Canteen1</span>
+                                <span th:if="${!food.hasAnyActiveCanteen(canteens)}"
+                                      class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">No active canteen</span>
+                            </div>
+                        </div>
+
+                        <div class="food-footer flex-column gap-2">
                             <div class="food-price">₹<span th:text="${#numbers.formatDecimal(food.price, 1, 2)}">0.00</span></div>
 
-                            <!-- Can only order if PREPARED AND AVAILABLE -->
-                            <form th:if="${food.available}" th:action="@{/cart/add}" method="post" class="d-flex align-items-center gap-1">
+                            <!-- Can only order if PREPARED, AVAILABLE AND AT LEAST ONE ACTIVE CANTEEN EXISTS -->
+                            <form th:if="${food.available and food.hasAnyActiveCanteen(canteens)}" th:action="@{/cart/add}" method="post" class="w-100">
                                 <input type="hidden" name="foodId" th:value="${food.foodId}">
-                                <div class="input-group input-group-sm" style="width: 120px;">
-                                    <input type="number" name="quantity" value="1" min="1" max="10" class="form-control text-center px-1" required>
-                                    <button type="submit" class="btn btn-canteen-primary" title="Add to Tray">
+                                <div class="d-flex align-items-center gap-2 w-100">
+                                    <select name="canteen" class="form-select form-select-sm flex-grow-1" required>
+                                        <option th:each="canteen : ${food.canteens}"
+                                                th:if="${canteens.contains(canteen)}"
+                                                th:value="${canteen}"
+                                                th:text="${canteen}"
+                                                th:selected="${selectedCanteen == canteen}">Canteen1</option>
+                                    </select>
+                                    <input type="number" name="quantity" value="1" min="1" max="10"
+                                           class="form-control form-control-sm text-center px-1" style="width: 60px;" required>
+                                    <button type="submit" class="btn btn-canteen-primary btn-sm flex-shrink-0" title="Add to Tray">
                                         <i class="bi bi-cart-plus-fill"></i> Add
                                     </button>
                                 </div>
                             </form>
 
+                            <!-- Disabled if prepared today but no active canteen provides it -->
+                            <button th:if="${food.available and !food.hasAnyActiveCanteen(canteens)}" class="btn btn-sm btn-secondary w-100" disabled
+                                    title="This dish is not available in any currently active canteen">
+                                <i class="bi bi-shop me-1"></i>Canteen Inactive
+                            </button>
+
                             <!-- Strictly disabled if NOT prepared today -->
-                            <button th:unless="${food.available}" class="btn btn-sm btn-secondary" disabled title="This dish is not prepared on the counter today">
+                            <button th:unless="${food.available}" class="btn btn-sm btn-secondary w-100" disabled
+                                    title="This dish is not prepared on the counter today">
                                 <i class="bi bi-slash-circle me-1"></i>Not in Counter
                             </button>
                         </div>

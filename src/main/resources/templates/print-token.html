@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Token ' + ${order.tokenNumber} + ' - Campus Canteen'">Order Token Slip</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #0f172a;
+        }
+        .receipt-card {
+            max-width: 440px;
+            margin: 30px auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+            padding: 24px;
+        }
+        .token-badge {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #0f172a;
+            font-family: monospace;
+            padding: 8px 16px;
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        .dashed-line {
+            border-top: 1px dashed #cbd5e1;
+            margin: 16px 0;
+        }
+        @media print {
+            body {
+                background: #ffffff !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .receipt-card {
+                box-shadow: none !important;
+                border: 1px solid #000000 !important;
+                margin: 0 auto !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                border-radius: 0 !important;
+                padding: 12px !important;
+            }
+            .token-badge {
+                border-color: #000000 !important;
+                background: transparent !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container py-3">
+
+    <!-- Action Bar (hidden when printing) -->
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print" style="max-width: 440px; margin: 0 auto;">
+        <a th:href="@{/order/{token}(token=${order.tokenNumber})}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i>Back to Order
+        </a>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" onclick="window.print()">
+                <i class="bi bi-printer-fill me-1"></i>Print Slip
+            </button>
+            <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-2" onclick="window.close()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Printable Token Slip -->
+    <div class="receipt-card">
+
+        <!-- Header -->
+        <div class="text-center mb-3">
+            <div class="fw-bold fs-5 text-uppercase" style="letter-spacing: 0.5px;">Campus Canteen</div>
+            <div class="text-muted small">Food Pre-order & Express Pickup Token</div>
+            <div class="mt-2">
+                <span class="badge bg-dark text-white px-3 py-2 rounded-pill fs-6">
+                    <i class="bi bi-shop me-1"></i><span th:text="${order.canteen}">Canteen1</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="dashed-line"></div>
+
+        <!-- Big Token Number -->
+        <div class="text-center my-3">
+            <small class="text-muted text-uppercase fw-semibold d-block mb-1">Pickup Token Number</small>
+            <div class="token-badge" th:text="${order.tokenNumber}">#TK-101</div>
+            <div class="mt-2">
+                <span th:if="${order.status.name() == 'READY_FOR_PICKUP' or order.status.name() == 'CONFIRMED'}"
+                      class="badge bg-success-subtle text-success border border-success-subtle">
+                    <i class="bi bi-bell-fill me-1"></i>Ready for Pickup at Counter
+                </span>
+                <span th:if="${order.status.name() == 'COMPLETED'}" class="badge bg-secondary-subtle text-secondary border">
+                    <i class="bi bi-check2-all me-1"></i>Completed
+                </span>
+                <span th:if="${order.status.name() == 'CANCELLED'}" class="badge bg-danger-subtle text-danger border">
+                    <i class="bi bi-x-circle me-1"></i>Cancelled
+                </span>
+            </div>
+        </div>
+
+        <div class="dashed-line"></div>
+
+        <!-- Student & Order Details -->
+        <div class="small mb-3">
+            <div class="d-flex justify-content-between py-1" th:if="${order.student != null}">
+                <span class="text-muted">Student Name:</span>
+                <strong class="text-dark" th:text="${order.student.name}">Alex Morgan</strong>
+            </div>
+            <div class="d-flex justify-content-between py-1" th:if="${order.student != null}">
+                <span class="text-muted">Roll Number:</span>
+                <strong class="font-monospace text-dark" th:text="${order.student.rollNumber}">CS101</strong>
+            </div>
+            <div class="d-flex justify-content-between py-1" th:if="${order.student != null and order.student.department != null}">
+                <span class="text-muted">Department:</span>
+                <span class="text-dark" th:text="${order.student.department}">Computer Science</span>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+                <span class="text-muted">Order Date/Time:</span>
+                <span class="text-dark fw-semibold" th:text="${order.formattedOrderTime}">19 Sep 2026, 01:30 PM</span>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+                <span class="text-muted">Canteen Counter:</span>
+                <span class="text-primary fw-bold" th:text="${order.canteen}">Canteen1</span>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+                <span class="text-muted">Payment Method:</span>
+                <span class="text-dark" th:text="${order.paymentMethod}">PAY_AT_COUNTER</span>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+                <span class="text-muted">Payment Status:</span>
+                <span class="fw-bold"
+                      th:classappend="${order.paymentStatus == 'PAID'} ? 'text-success' : 'text-warning'"
+                      th:text="${order.paymentStatus}">PAY_ON_PICKUP</span>
+            </div>
+        </div>
+
+        <div class="dashed-line"></div>
+
+        <!-- Food Items Table -->
+        <div class="mb-3">
+            <div class="fw-bold small text-muted text-uppercase mb-2">Reserved Items</div>
+            <table class="table table-sm table-borderless mb-0 small">
+                <thead>
+                    <tr class="text-muted border-bottom">
+                        <th>Item</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-end">Price</th>
+                        <th class="text-end">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="it : ${order.items}" class="border-bottom">
+                        <td>
+                            <strong th:text="${it.food.name}">Dish Name</strong>
+                            <small class="text-muted d-block" th:if="${it.food.counterLocation}" th:text="${it.food.counterLocation}">Counter</small>
+                        </td>
+                        <td class="text-center" th:text="'x' + ${it.quantity}">x1</td>
+                        <td class="text-end">₹<span th:text="${#numbers.formatDecimal(it.unitPrice, 1, 2)}">0.00</span></td>
+                        <td class="text-end fw-semibold">₹<span th:text="${#numbers.formatDecimal(it.subtotal, 1, 2)}">0.00</span></td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="3" class="pt-2 fs-6">Total Amount:</th>
+                        <th class="pt-2 text-end fs-6 fw-bold text-primary">₹<span th:text="${#numbers.formatDecimal(order.totalAmount, 1, 2)}">0.00</span></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="dashed-line"></div>
+
+        <!-- Instructions -->
+        <div class="text-center small text-muted">
+            <p class="mb-1 fw-bold text-dark">Instructions for Counter Pickup:</p>
+            <p class="mb-0">
+                Please present this token (<strong th:text="${order.tokenNumber}">#TK-101</strong>)
+                at the <strong th:text="${order.canteen}">Canteen1</strong> counter to collect your meal.
+            </p>
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

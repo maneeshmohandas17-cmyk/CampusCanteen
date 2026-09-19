@@ -7,34 +7,41 @@ import java.util.Map;
 
 public class Cart {
 
-    private final Map<Long, CartItem> items = new LinkedHashMap<>();
+    private final Map<String, CartItem> items = new LinkedHashMap<>();
 
-    public void addItem(Food food, int quantity) {
+    public void addItem(Food food, int quantity, String canteen) {
         if (food == null || quantity <= 0) return;
-        if (items.containsKey(food.getFoodId())) {
-            CartItem existing = items.get(food.getFoodId());
+        String key = food.getFoodId() + ":" + canteen;
+        if (items.containsKey(key)) {
+            CartItem existing = items.get(key);
             existing.setQuantity(existing.getQuantity() + quantity);
         } else {
-            items.put(food.getFoodId(), new CartItem(food, quantity));
+            items.put(key, new CartItem(food, quantity, canteen));
         }
     }
 
-    public void updateQuantity(Long foodId, int quantity) {
-        if (items.containsKey(foodId)) {
+    public void updateQuantity(Long foodId, String canteen, int quantity) {
+        String key = foodId + ":" + canteen;
+        if (items.containsKey(key)) {
             if (quantity <= 0) {
-                items.remove(foodId);
+                items.remove(key);
             } else {
-                items.get(foodId).setQuantity(quantity);
+                items.get(key).setQuantity(quantity);
             }
         }
     }
 
-    public void removeItem(Long foodId) {
-        items.remove(foodId);
+    public void removeItem(Long foodId, String canteen) {
+        items.remove(foodId + ":" + canteen);
     }
 
     public void clear() {
         items.clear();
+    }
+
+    public void removeInactiveCanteens(java.util.function.Predicate<String> isValidCanteen) {
+        if (isValidCanteen == null) return;
+        items.entrySet().removeIf(entry -> !isValidCanteen.test(entry.getValue().getCanteen()));
     }
 
     public List<CartItem> getItems() {

@@ -42,6 +42,11 @@ public class PaymentController {
 
     @GetMapping("/payment/{token}")
     public String showGateway(@PathVariable String token, HttpSession session, Model model) {
+        Student student = (Student) session.getAttribute(StudentAuthController.SESSION_STUDENT);
+        if (student == null) {
+            return "redirect:/login?redirect=/payment/" + token;
+        }
+
         addCommonAttributes(session, model);
 
         Optional<Order> orderOpt = orderService.getOrderByToken(token);
@@ -58,33 +63,73 @@ public class PaymentController {
         }
 
         model.addAttribute("order", order);
+        if (order.getOrderGroupId() != null && !order.getOrderGroupId().isEmpty()) {
+            java.util.List<Order> groupOrders = orderService.getOrdersByGroupId(order.getOrderGroupId());
+            double totalPayable = groupOrders.stream().mapToDouble(Order::getTotalAmount).sum();
+            model.addAttribute("groupOrders", groupOrders);
+            model.addAttribute("totalPayable", totalPayable);
+        } else {
+            model.addAttribute("groupOrders", java.util.List.of(order));
+            model.addAttribute("totalPayable", order.getTotalAmount());
+        }
         return "payment-gateway";
     }
 
     @PostMapping("/payment/{token}/process")
     public String processPayment(@PathVariable String token,
-                                  @RequestParam String upiOrCardInput,
+                                  @RequestParam(name = "upiOrCardInput", required = false, defaultValue = "") String upiOrCardInput,
+                                  @RequestParam(name = "paymentType", required = false, defaultValue = "UPI_ONLINE") String paymentType,
                                   HttpSession session,
                                   RedirectAttributes redirectAttributes) {
 
+        Student student = (Student) session.getAttribute(StudentAuthController.SESSION_STUDENT);
+        if (student == null) {
+            return "redirect:/login?redirect=/payment/" + token;
+        }
+
+        String input = upiOrCardInput != null ? upiOrCardInput.trim() : "";
+        if (input.isEmpty()) {
+            redirectAttributes.addFlashAttribute("paymentError",
+                    "Please enter a demo UPI ID or Card Number before proceeding.");
+            return "redirect:/payment/" + token;
+        }
+
         // Demo-only simulation rule: including the word "fail" in the UPI ID / card field
         // simulates a declined payment, so both flows can be shown without real money involved.
-        boolean simulateFailure = upiOrCardInput != null && upiOrCardInput.trim().toLowerCase().contains("fail");
+        boolean simulateFailure = input.toLowerCase().contains("fail");
 
         try {
-            Order order = orderService.settleOnlinePayment(token, !simulateFailure);
+            String method = "CARD_ONLINE".equalsIgnoreCase(paymentType) ? "CARD_ONLINE" : "UPI_ONLINE";
+            Order order = orderService.settleOnlinePayment(token, !simulateFailure, method);
 
-            if (!simulateFailure && order.getPaymentStatus().equals("PAID")) {
+            if (!simulateFailure && "PAID".equalsIgnoreCase(order.getPaymentStatus())) {
                 redirectAttributes.addFlashAttribute("orderSuccess", true);
                 return "redirect:/order/" + order.getTokenNumber();
             } else {
                 redirectAttributes.addFlashAttribute("paymentError",
-                        "Payment declined by your bank/UPI app. Please try again or choose a different method.");
+                        "Payment declined by your bank/UPI app (demo test failure simulated). Please try again or choose a different method.");
                 return "redirect:/payment/" + token;
             }
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("paymentError", ex.getMessage());
             return "redirect:/payment/" + token;
         }
+    }
+
+    @PostMapping("/payment/{token}/cancel")
+    public String cancelPayment(@PathVariable String token,
+                                HttpSession session,
+                                RedirectAttributes redirectAttributes) {
+        Student student = (Student) session.getAttribute(StudentAuthController.SESSION_STUDENT);
+        if (student == null) {
+            return "redirect:/login";
+        }
+
+        try {
+            orderService.cancelOrder(token);
+            redirectAttributes.addFlashAttribute("info", "Online payment checkout was cancelled.");
+        } catch (Exception ignored) {}
+
+        return "redirect:/orders";
     }
 }
