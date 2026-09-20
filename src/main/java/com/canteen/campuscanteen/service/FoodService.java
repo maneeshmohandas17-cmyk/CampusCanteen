@@ -12,13 +12,16 @@ import java.util.Optional;
 public class FoodService {
 
     private final FoodRepository foodRepository;
+    private final com.canteen.campuscanteen.repository.OrderItemRepository orderItemRepository;
 
     public static final List<String> CATEGORIES = Arrays.asList(
             "Breakfast", "Lunch", "Snacks", "Beverages", "Specials"
     );
 
-    public FoodService(FoodRepository foodRepository) {
+    public FoodService(FoodRepository foodRepository,
+                       com.canteen.campuscanteen.repository.OrderItemRepository orderItemRepository) {
         this.foodRepository = foodRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
     public List<Food> getAllFood() {
@@ -84,7 +87,9 @@ public class FoodService {
         return foodRepository.save(food);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void deleteFood(Long foodId) {
+        orderItemRepository.deleteByFood_FoodId(foodId);
         foodRepository.deleteById(foodId);
     }
 

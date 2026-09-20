@@ -96,7 +96,15 @@ public class DataInitializer implements CommandLineRunner {
             c.setActive(true);
             canteenRepository.save(c);
         }
-        System.out.println(">> Verified standard 3 canteens: Canteen1, Canteen2, Canteen3.");
+        // Purge any test or random dishes that may have leaked into the database
+        try {
+            jdbcTemplate.execute("DELETE FROM order_items WHERE food_id IN (SELECT food_id FROM foods WHERE LOWER(name) LIKE 'test%' OR LOWER(name) LIKE 'concurrent%')");
+            jdbcTemplate.execute("DELETE FROM canteen_orders WHERE order_id NOT IN (SELECT DISTINCT order_id FROM order_items)");
+            jdbcTemplate.execute("DELETE FROM food_canteen_stock WHERE food_id IN (SELECT food_id FROM foods WHERE LOWER(name) LIKE 'test%' OR LOWER(name) LIKE 'concurrent%')");
+            jdbcTemplate.execute("DELETE FROM food_canteens WHERE food_id IN (SELECT food_id FROM foods WHERE LOWER(name) LIKE 'test%' OR LOWER(name) LIKE 'concurrent%')");
+            jdbcTemplate.execute("DELETE FROM foods WHERE LOWER(name) LIKE 'test%' OR LOWER(name) LIKE 'concurrent%'");
+            jdbcTemplate.execute("DELETE FROM students WHERE LOWER(roll_number) LIKE 'test%'");
+        } catch (Exception ignored) {}
 
         if (foodRepository.count() == 0) {
             List<Food> preparedFoods = Arrays.asList(
