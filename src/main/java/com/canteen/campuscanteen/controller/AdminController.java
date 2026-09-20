@@ -266,11 +266,55 @@ public class AdminController {
             food.setCanteens(java.util.Set.of(staffCanteen));
         }
 
+        int initialStock = food.getAvailableQuantity() != null ? Math.max(0, food.getAvailableQuantity()) : 20;
+        if (food.getCanteens() != null && !food.getCanteens().isEmpty()) {
+            for (String c : food.getCanteens()) {
+                food.setStockForCanteen(c, initialStock);
+            }
+        } else if (staffCanteen != null) {
+            food.setStockForCanteen(staffCanteen, initialStock);
+        } else {
+            food.setStockForCanteen("Canteen1", initialStock);
+        }
+
         if (food.getImage() == null || food.getImage().trim().isEmpty()) {
             food.setImage(food.isVeg() ? "veg-sandwich.jpg" : "chicken-biryani.jpg");
         }
         foodService.saveFood(food);
-        redirectAttributes.addFlashAttribute("success", "New dish '" + food.getName() + "' added to the canteen menu!");
+        redirectAttributes.addFlashAttribute("success", "New dish '" + food.getName() + "' added to the canteen menu with stock " + initialStock + "!");
+        return "redirect:/admin/menu";
+    }
+
+    @PostMapping("/menu/stock/{id}")
+    public String updateFoodStock(@PathVariable Long id,
+                                  @RequestParam String canteen,
+                                  @RequestParam int quantity,
+                                  HttpSession session,
+                                  RedirectAttributes redirectAttributes) {
+        if (!isAuthenticated(session)) {
+            return "redirect:/admin/login";
+        }
+
+        String staffCanteen = (String) session.getAttribute(SESSION_STAFF_CANTEEN);
+        if (staffCanteen != null && !canteenService.isValidCanteen(staffCanteen)) {
+            session.removeAttribute(SESSION_ADMIN);
+            session.removeAttribute(SESSION_STAFF_CANTEEN);
+            redirectAttributes.addFlashAttribute("error", "The canteen '" + staffCanteen + "' is no longer active.");
+            return "redirect:/admin/login";
+        }
+
+        if (staffCanteen != null && !staffCanteen.equalsIgnoreCase(canteen)) {
+            redirectAttributes.addFlashAttribute("error", "Unauthorized: You can only update stock for " + staffCanteen);
+            return "redirect:/admin/menu";
+        }
+
+        try {
+            Food updated = foodService.updateStock(id, canteen, Math.max(0, quantity));
+            redirectAttributes.addFlashAttribute("success", "Stock updated for '" + updated.getName() + "' in " + canteen + ": " + updated.getStockForCanteen(canteen) + " remaining.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Failed to update stock: " + e.getMessage());
+        }
+
         return "redirect:/admin/menu";
     }
 

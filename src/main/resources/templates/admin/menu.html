@@ -90,6 +90,7 @@
                         <th scope="col">Diet</th>
                         <th scope="col">Canteen(s) & Location</th>
                         <th scope="col">Price</th>
+                        <th scope="col">Remaining Stock</th>
                         <th scope="col" class="text-center">Counter Availability</th>
                         <th scope="col" class="text-end pe-4">Actions</th>
                     </tr>
@@ -130,24 +131,49 @@
                             ₹<span th:text="${#numbers.formatDecimal(food.price, 1, 2)}">0.00</span>
                         </td>
 
+                        <!-- Remaining Stock Column -->
+                        <td>
+                            <div th:if="${staffCanteen != null}">
+                                <span th:class="'badge fs-6 ' + (${food.getStockForCanteen(staffCanteen) > 0} ? 'bg-primary' : 'bg-danger')"
+                                      th:text="${food.getStockForCanteen(staffCanteen)} + ' left'">15 left</span>
+                            </div>
+                            <div th:unless="${staffCanteen != null}" class="d-flex flex-column gap-1">
+                                <span th:each="cName : ${food.canteens}"
+                                      th:class="'badge ' + (${food.getStockForCanteen(cName) > 0} ? 'bg-secondary' : 'bg-danger-subtle text-danger border')">
+                                    <span th:text="${cName}">Canteen1</span>: <strong th:text="${food.getStockForCanteen(cName)}">15</strong>
+                                </span>
+                                <small class="fw-bold text-dark" th:text="'Total: ' + ${food.totalStock}">Total: 45</small>
+                            </div>
+                        </td>
+
                         <!-- 1-Click Counter Stock Toggle -->
                         <td class="text-center">
                             <form th:action="@{/admin/menu/toggle/{id}(id=${food.foodId})}" method="post" class="m-0 d-inline">
                                 <button type="submit" th:class="'btn btn-sm rounded-pill px-3 ' + (${food.available} ? 'btn-success' : 'btn-danger')"
                                         title="Click to toggle Ready on Counter / Not Prepared Today">
                                     <i th:class="'bi me-1 ' + (${food.available} ? 'bi-check-circle-fill' : 'bi-x-circle-fill')"></i>
-                                    <span th:text="${food.available} ? 'Ready on Counter (Click to Disable)' : 'Not Prepared Today (Click to Enable)'"></span>
+                                    <span th:text="${food.available} ? 'Ready on Counter' : 'Not Prepared Today'"></span>
                                 </button>
                             </form>
                         </td>
 
                         <td class="text-end pe-4">
-                            <form th:action="@{/admin/menu/delete/{id}(id=${food.foodId})}" method="post" class="m-0 d-inline">
-                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill"
-                                        onclick="return confirm('Remove this dish from the counter menu?')" title="Delete">
-                                    <i class="bi bi-trash"></i>
+                            <div class="d-flex justify-content-end gap-1">
+                                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill"
+                                        data-bs-toggle="modal" data-bs-target="#updateStockModal"
+                                        th:data-food-id="${food.foodId}"
+                                        th:data-food-name="${food.name}"
+                                        th:data-staff-canteen="${staffCanteen}"
+                                        onclick="openStockModal(this)" title="Update Stock Quantity">
+                                    <i class="bi bi-plus-slash-minus me-1"></i>Stock
                                 </button>
-                            </form>
+                                <form th:action="@{/admin/menu/delete/{id}(id=${food.foodId})}" method="post" class="m-0 d-inline">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill"
+                                            onclick="return confirm('Remove this dish from the counter menu?')" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
@@ -185,6 +211,13 @@
                         </div>
                     </div>
 
+                    <!-- Available Quantity Field -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Available Quantity *</label>
+                        <input type="number" name="availableQuantity" class="form-control" placeholder="e.g., 25" value="25" min="0" required>
+                        <small class="text-muted">Initial portions in counter stock for each selected canteen</small>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Available Canteens *</label>
                         <div class="d-flex gap-3">
@@ -217,11 +250,16 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Image</label>
                         <select name="image" class="form-select">
-                            <option value="veg-sandwich.jpg">veg-sandwich.jpg (Sandwich/Snack)</option>
                             <option value="chicken-biryani.jpg">chicken-biryani.jpg (Biryani/Rice)</option>
+                            <option value="chicken-burger.jpg">chicken-burger.jpg (Burger/Fast Food)</option>
+                            <option value="cold-coffee.jpg">cold-coffee.jpg (Cold Coffee)</option>
+                            <option value="filter-coffee.jpg">filter-coffee.jpg (Filter Coffee)</option>
                             <option value="masala-dosa.jpg">masala-dosa.jpg (Dosa/South Indian)</option>
+                            <option value="paneer-butter-masala.jpg">paneer-butter-masala.jpg (Curry/Special)</option>
+                            <option value="samosa.jpg">samosa.jpg (Samosa/Snack)</option>
+                            <option value="tea.jpg">tea.jpg (Chai/Beverage)</option>
                             <option value="veg-friedrice.jpg">veg-friedrice.jpg (Fried Rice)</option>
-                            <option value="tea.jpg">tea.jpg (Chai/Coffee/Drink)</option>
+                            <option value="veg-sandwich.jpg" selected>veg-sandwich.jpg (Sandwich/Snack)</option>
                         </select>
                     </div>
 
@@ -239,6 +277,67 @@
     </div>
 </div>
 
+<!-- Modal: Update Stock Quantity -->
+<div class="modal fade" id="updateStockModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-dark fs-6" id="stockModalTitle">Update Counter Stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="updateStockForm" method="post">
+                <div class="modal-body p-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Canteen</label>
+                        <select name="canteen" id="stockModalCanteen" class="form-select form-select-sm" required>
+                            <option th:each="c : ${canteens}" th:value="${c}" th:text="${c}">Canteen1</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">New Available Quantity</label>
+                        <input type="number" name="quantity" id="stockModalQuantity" class="form-control" min="0" value="20" required>
+                        <small class="text-muted">Setting 0 automatically sets item to Unavailable.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light p-2">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold">Save Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function openStockModal(btn) {
+        const foodId = btn.getAttribute('data-food-id');
+        const foodName = btn.getAttribute('data-food-name');
+        const staffCanteen = btn.getAttribute('data-staff-canteen');
+
+        document.getElementById('stockModalTitle').innerText = 'Stock: ' + foodName;
+        document.getElementById('updateStockForm').action = '/admin/menu/stock/' + foodId;
+
+        const canteenSelect = document.getElementById('stockModalCanteen');
+        if (staffCanteen && staffCanteen !== 'null' && staffCanteen !== '') {
+            canteenSelect.value = staffCanteen;
+            canteenSelect.disabled = true;
+            // Add hidden input if disabled so it submits
+            let hidden = document.getElementById('hiddenStaffCanteen');
+            if (!hidden) {
+                hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.id = 'hiddenStaffCanteen';
+                hidden.name = 'canteen';
+                document.getElementById('updateStockForm').appendChild(hidden);
+            }
+            hidden.value = staffCanteen;
+        } else {
+            canteenSelect.disabled = false;
+            const hidden = document.getElementById('hiddenStaffCanteen');
+            if (hidden) hidden.remove();
+        }
+    }
+</script>
 </body>
 </html>

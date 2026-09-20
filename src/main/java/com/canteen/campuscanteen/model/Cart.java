@@ -9,6 +9,11 @@ public class Cart {
 
     private final Map<String, CartItem> items = new LinkedHashMap<>();
 
+    public int getItemQuantity(Long foodId, String canteen) {
+        CartItem item = items.get(foodId + ":" + canteen);
+        return item != null ? item.getQuantity() : 0;
+    }
+
     public void addItem(Food food, int quantity, String canteen) {
         if (food == null || quantity <= 0) return;
         String key = food.getFoodId() + ":" + canteen;

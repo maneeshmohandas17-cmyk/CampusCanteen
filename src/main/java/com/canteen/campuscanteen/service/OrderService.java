@@ -20,11 +20,15 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final CanteenService canteenService;
+    private final com.canteen.campuscanteen.repository.FoodRepository foodRepository;
     private static final AtomicInteger TOKEN_COUNTER = new AtomicInteger(100);
 
-    public OrderService(OrderRepository orderRepository, CanteenService canteenService) {
+    public OrderService(OrderRepository orderRepository,
+                        CanteenService canteenService,
+                        com.canteen.campuscanteen.repository.FoodRepository foodRepository) {
         this.orderRepository = orderRepository;
         this.canteenService = canteenService;
+        this.foodRepository = foodRepository;
     }
 
     @PostConstruct
@@ -84,6 +88,33 @@ public class OrderService {
             itemsByCanteen.computeIfAbsent(item.getCanteen(), ignored -> new ArrayList<>()).add(item);
         }
 
+        Map<Long, Food> managedFoods = new LinkedHashMap<>();
+        if (!isOnlineGateway) {
+            // Counter payment: Deduct stock only when order is successfully placed
+            for (CartItem item : cart.getItems()) {
+                Food food = foodRepository.findByIdForUpdate(item.getFood().getFoodId())
+                        .orElseThrow(() -> new IllegalArgumentException("Food not found: " + item.getFood().getName()));
+                int availableStock = food.getStockForCanteen(item.getCanteen());
+                if (availableStock < item.getQuantity()) {
+                    throw new IllegalArgumentException("Sorry! Only " + availableStock + " portion(s) of '" + food.getName() + "' remaining in " + item.getCanteen() + ".");
+                }
+                food.decreaseStock(item.getCanteen(), item.getQuantity());
+                foodRepository.save(food);
+                managedFoods.put(food.getFoodId(), food);
+            }
+        } else {
+            // Online demo payment: Check stock availability, do not permanently deduct yet
+            for (CartItem item : cart.getItems()) {
+                Food food = foodRepository.findById(item.getFood().getFoodId())
+                        .orElseThrow(() -> new IllegalArgumentException("Food not found: " + item.getFood().getName()));
+                int availableStock = food.getStockForCanteen(item.getCanteen());
+                if (availableStock < item.getQuantity()) {
+                    throw new IllegalArgumentException("Sorry! Only " + availableStock + " portion(s) of '" + food.getName() + "' remaining in " + item.getCanteen() + ".");
+                }
+                managedFoods.put(food.getFoodId(), food);
+            }
+        }
+
         List<Order> orders = new ArrayList<>();
         String groupId = "GRP-" + System.currentTimeMillis();
         for (Map.Entry<String, List<CartItem>> entry : itemsByCanteen.entrySet()) {
@@ -97,10 +128,15 @@ public class OrderService {
             order.setStatus(isOnlineGateway ? OrderStatus.AWAITING_PAYMENT : OrderStatus.READY_FOR_PICKUP);
             order.setPaymentMethod(paymentMethod != null ? paymentMethod : "PAY_AT_COUNTER");
             order.setPaymentStatus(isOnlineGateway ? "PENDING_PAYMENT" : "PAY_ON_PICKUP");
-            order.setTotalAmount(entry.getValue().stream().mapToDouble(CartItem::getSubtotal).sum());
+            order.setStockDeducted(!isOnlineGateway);
+            order.setTotalAmount(entry.getValue().stream().mapToDouble(item -> {
+                Food f = managedFoods.getOrDefault(item.getFood().getFoodId(), item.getFood());
+                return f.getPrice() * item.getQuantity();
+            }).sum());
 
             for (CartItem item : entry.getValue()) {
-                order.addItem(new OrderItem(order, item.getFood(), item.getQuantity(), item.getFood().getPrice()));
+                Food f = managedFoods.getOrDefault(item.getFood().getFoodId(), item.getFood());
+                order.addItem(new OrderItem(order, f, item.getQuantity(), f.getPrice()));
             }
             orders.add(orderRepository.save(order));
         }
@@ -134,9 +170,24 @@ public class OrderService {
                     o.setPaymentMethod(paymentMethod.trim().toUpperCase());
                 }
                 if (success) {
+                    // Deduct stock only after successful payment settlement
+                    if (!o.isStockDeducted()) {
+                        for (OrderItem item : o.getItems()) {
+                            Food food = foodRepository.findByIdForUpdate(item.getFood().getFoodId())
+                                    .orElseThrow(() -> new IllegalArgumentException("Food not found: " + item.getFood().getName()));
+                            int availableStock = food.getStockForCanteen(o.getCanteen());
+                            if (availableStock < item.getQuantity()) {
+                                throw new IllegalArgumentException("Sorry! '" + food.getName() + "' is out of stock in " + o.getCanteen() + ".");
+                            }
+                            food.decreaseStock(o.getCanteen(), item.getQuantity());
+                            foodRepository.save(food);
+                        }
+                        o.setStockDeducted(true);
+                    }
                     o.setPaymentStatus("PAID");
                     o.setStatus(OrderStatus.READY_FOR_PICKUP);
                 } else {
+                    // Payment failed: do not deduct stock
                     o.setPaymentStatus("FAILED");
                 }
                 orderRepository.save(o);
@@ -158,7 +209,17 @@ public class OrderService {
         }
 
         for (Order o : targetOrders) {
-            if (o.getStatus() == OrderStatus.AWAITING_PAYMENT) {
+            // If already deducted, restore deducted stock exactly once
+            if (o.isStockDeducted()) {
+                for (OrderItem item : o.getItems()) {
+                    foodRepository.findByIdForUpdate(item.getFood().getFoodId()).ifPresent(food -> {
+                        food.increaseStock(o.getCanteen(), item.getQuantity());
+                        foodRepository.save(food);
+                    });
+                }
+                o.setStockDeducted(false);
+            }
+            if (o.getStatus() == OrderStatus.AWAITING_PAYMENT || o.getStatus() == OrderStatus.READY_FOR_PICKUP || o.getStatus() == OrderStatus.CONFIRMED) {
                 o.setStatus(OrderStatus.CANCELLED);
                 o.setPaymentStatus("CANCELLED");
                 orderRepository.save(o);
@@ -196,9 +257,36 @@ public class OrderService {
     public Order updateOrderStatus(Long orderId, OrderStatus newStatus) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        if (newStatus == OrderStatus.CANCELLED && order.isStockDeducted()) {
+            // Restore deducted stock exactly once
+            for (OrderItem item : order.getItems()) {
+                foodRepository.findByIdForUpdate(item.getFood().getFoodId()).ifPresent(food -> {
+                    food.increaseStock(order.getCanteen(), item.getQuantity());
+                    foodRepository.save(food);
+                });
+            }
+            order.setStockDeducted(false);
+        } else if (newStatus != OrderStatus.CANCELLED && !order.isStockDeducted() && order.getStatus() == OrderStatus.CANCELLED) {
+            // Re-activating a previously cancelled order: verify and deduct stock
+            for (OrderItem item : order.getItems()) {
+                Food food = foodRepository.findByIdForUpdate(item.getFood().getFoodId())
+                        .orElseThrow(() -> new IllegalArgumentException("Food not found: " + item.getFood().getName()));
+                int stock = food.getStockForCanteen(order.getCanteen());
+                if (stock < item.getQuantity()) {
+                    throw new IllegalArgumentException("Cannot re-activate: only " + stock + " portion(s) of '" + food.getName() + "' remaining in " + order.getCanteen() + ".");
+                }
+                food.decreaseStock(order.getCanteen(), item.getQuantity());
+                foodRepository.save(food);
+            }
+            order.setStockDeducted(true);
+        }
+
         order.setStatus(newStatus);
         if (newStatus == OrderStatus.COMPLETED && "PAY_ON_PICKUP".equalsIgnoreCase(order.getPaymentStatus())) {
             order.setPaymentStatus("PAID");
+        } else if (newStatus == OrderStatus.CANCELLED) {
+            order.setPaymentStatus("CANCELLED");
         }
         return orderRepository.save(order);
     }

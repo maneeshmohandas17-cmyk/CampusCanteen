@@ -83,10 +83,18 @@ public class CanteenService {
         String canteenName = canteen.getName();
         canteenRepository.delete(canteen);
 
-        // Remove the deleted canteen from all food menus
+        // Remove the deleted canteen from all food menus and canteen stock
         List<Food> foods = foodRepository.findAll();
         for (Food food : foods) {
+            boolean modified = false;
             if (food.getCanteens() != null && food.getCanteens().remove(canteenName)) {
+                modified = true;
+            }
+            if (food.getCanteenStock() != null && food.getCanteenStock().remove(canteenName) != null) {
+                modified = true;
+            }
+            if (modified) {
+                food.syncAvailability();
                 foodRepository.save(food);
             }
         }

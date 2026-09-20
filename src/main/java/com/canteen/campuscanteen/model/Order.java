@@ -43,6 +43,9 @@ public class Order {
     @Column(nullable = false)
     private double totalAmount;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean stockDeducted = false;
+
     @Column(name = "order_group_id")
     private String orderGroupId;
 
@@ -162,6 +165,14 @@ public class Order {
 
     public void setOrderGroupId(String orderGroupId) {
         this.orderGroupId = orderGroupId;
+    }
+
+    public boolean isStockDeducted() {
+        return stockDeducted;
+    }
+
+    public void setStockDeducted(boolean stockDeducted) {
+        this.stockDeducted = stockDeducted;
     }
 
     public void addItem(OrderItem item) {

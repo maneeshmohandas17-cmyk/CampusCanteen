@@ -115,6 +115,10 @@ public class OrderController {
         }
 
         Order order = orderOpt.get();
+        if (order.getStatus() == OrderStatus.AWAITING_PAYMENT) {
+            return "redirect:/payment/" + order.getTokenNumber();
+        }
+
         model.addAttribute("order", order);
         return "print-token";
     }

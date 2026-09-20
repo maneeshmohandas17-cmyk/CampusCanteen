@@ -7,11 +7,13 @@ import com.canteen.campuscanteen.repository.CanteenRepository;
 import com.canteen.campuscanteen.repository.FoodRepository;
 import com.canteen.campuscanteen.repository.StudentRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 
 @Component
@@ -20,13 +22,16 @@ public class DataInitializer implements CommandLineRunner {
     private final FoodRepository foodRepository;
     private final StudentRepository studentRepository;
     private final CanteenRepository canteenRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public DataInitializer(FoodRepository foodRepository,
                            StudentRepository studentRepository,
-                           CanteenRepository canteenRepository) {
+                           CanteenRepository canteenRepository,
+                           JdbcTemplate jdbcTemplate) {
         this.foodRepository = foodRepository;
         this.studentRepository = studentRepository;
         this.canteenRepository = canteenRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     private static Set<String> getCanteensForFood(String foodName) {
@@ -42,6 +47,22 @@ public class DataInitializer implements CommandLineRunner {
             case "Paneer Butter Masala Bowl" -> new LinkedHashSet<>(List.of("Canteen1"));
             case "Crispy Chicken Burger" -> new LinkedHashSet<>(List.of("Canteen2"));
             default -> new LinkedHashSet<>(List.of("Canteen1"));
+        };
+    }
+
+    private static Map<String, Integer> getStockForFood(String foodName) {
+        return switch (foodName) {
+            case "Chicken Biryani" -> new java.util.LinkedHashMap<>(Map.of("Canteen1", 25));
+            case "Crispy Masala Dosa" -> new java.util.LinkedHashMap<>(Map.of("Canteen2", 30));
+            case "Veg Fried Rice" -> new java.util.LinkedHashMap<>(Map.of("Canteen3", 20));
+            case "Grilled Veg Cheese Sandwich" -> new java.util.LinkedHashMap<>(Map.of("Canteen1", 15, "Canteen2", 20));
+            case "Hot Masala Chai" -> new java.util.LinkedHashMap<>(Map.of("Canteen1", 40, "Canteen2", 35, "Canteen3", 50));
+            case "South Indian Filter Coffee" -> new java.util.LinkedHashMap<>(Map.of("Canteen2", 25, "Canteen3", 30));
+            case "Crispy Samosa (2 Pcs)" -> new java.util.LinkedHashMap<>(Map.of("Canteen1", 20, "Canteen3", 25));
+            case "Chilled Cold Coffee" -> new java.util.LinkedHashMap<>(Map.of("Canteen1", 15, "Canteen2", 15));
+            case "Paneer Butter Masala Bowl" -> new java.util.LinkedHashMap<>(Map.of("Canteen1", 0));
+            case "Crispy Chicken Burger" -> new java.util.LinkedHashMap<>(Map.of("Canteen2", 0));
+            default -> new java.util.LinkedHashMap<>(Map.of("Canteen1", 15));
         };
     }
 
@@ -64,18 +85,16 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        try {
+            jdbcTemplate.execute("ALTER TABLE canteen_orders ADD COLUMN IF NOT EXISTS stock_deducted BOOLEAN DEFAULT FALSE");
+        } catch (Exception ignored) {}
+
         // Ensure exactly Canteen1, Canteen2, and Canteen3 exist and are active
         List<String> defaultCanteens = List.of("Canteen1", "Canteen2", "Canteen3");
         for (String cName : defaultCanteens) {
             Canteen c = canteenRepository.findByNameIgnoreCase(cName).orElseGet(() -> new Canteen(cName, true));
             c.setActive(true);
             canteenRepository.save(c);
-        }
-        // Remove any test/stray canteens not matching the standard 3 canteens
-        for (Canteen c : canteenRepository.findAll()) {
-            if (!defaultCanteens.contains(c.getName())) {
-                canteenRepository.delete(c);
-            }
         }
         System.out.println(">> Verified standard 3 canteens: Canteen1, Canteen2, Canteen3.");
 
@@ -124,23 +143,38 @@ public class DataInitializer implements CommandLineRunner {
 
             for (Food food : preparedFoods) {
                 food.setCanteens(getCanteensForFood(food.getName()));
+                food.setCanteenStock(getStockForFood(food.getName()));
+                if ("Paneer Butter Masala Bowl".equalsIgnoreCase(food.getName()) ||
+                    "Crispy Chicken Burger".equalsIgnoreCase(food.getName())) {
+                    food.setAvailable(false);
+                } else {
+                    food.syncAvailability();
+                }
             }
 
             foodRepository.saveAll(preparedFoods);
             System.out.println(">> Seeded " + preparedFoods.size() + " prepared dishes into Canteen Database.");
         } else {
-            // Update existing dishes with counter location, availability, canteen mapping, and unique images
+            // Update existing dishes with counter location, availability, canteen mapping, unique images, and stock
             for (Food food : foodRepository.findAll()) {
                 if (food.getCounterLocation() == null || food.getCounterLocation().isEmpty()) {
                     food.setCounterLocation("Hot Display Counter");
+                }
+                if (food.getCanteens() == null || food.getCanteens().isEmpty() || food.getCanteens().stream().noneMatch(defaultCanteens::contains)) {
+                    food.setCanteens(getCanteensForFood(food.getName()));
+                }
+                if (food.getCanteenStock() == null || food.getCanteenStock().isEmpty()) {
+                    food.setCanteenStock(getStockForFood(food.getName()));
                 }
                 // Keep 2 dishes unavailable so students see items that are not prepared today
                 if ("Paneer Butter Masala Bowl".equalsIgnoreCase(food.getName()) ||
                     "Crispy Chicken Burger".equalsIgnoreCase(food.getName())) {
                     food.setAvailable(false);
-                }
-                if (food.getCanteens() == null || food.getCanteens().isEmpty() || food.getCanteens().stream().noneMatch(defaultCanteens::contains)) {
-                    food.setCanteens(getCanteensForFood(food.getName()));
+                    for (String c : food.getCanteens()) {
+                        food.setStockForCanteen(c, 0);
+                    }
+                } else {
+                    food.syncAvailability();
                 }
                 // Fix duplicate images — assign each food its own unique image
                 String correctImage = getImageForFood(food.getName());

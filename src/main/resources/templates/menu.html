@@ -116,7 +116,7 @@
                                 <i class="bi bi-check-circle me-1"></i>Ready in Counter
                             </span>
                             <span th:unless="${food.available}" class="prep-badge bg-danger">
-                                <i class="bi bi-x-circle me-1"></i>Not Prepared Today
+                                <i class="bi bi-x-circle me-1"></i>Sold Out / Unavailable
                             </span>
                         </div>
                     </div>
@@ -127,21 +127,24 @@
                             <span th:if="${food.available}" class="badge bg-success-subtle text-success small">
                                 <i class="bi bi-geo-alt-fill me-1"></i><span th:text="${food.counterLocation}">Hot Counter</span>
                             </span>
-                            <span th:unless="${food.available}" class="badge bg-danger-subtle text-danger small">Unavailable</span>
+                            <span th:unless="${food.available}" class="badge bg-danger-subtle text-danger small">Sold Out / Unavailable</span>
                         </div>
 
                         <h5 class="food-title" th:text="${food.name}">Dish Name</h5>
                         <p class="food-desc" th:text="${food.description}">Description</p>
 
-                        <!-- Available Canteens Badges -->
+                        <!-- Available Canteens & Remaining Stock Badges -->
                         <div class="mb-2">
                             <small class="text-muted d-block mb-1"><i class="bi bi-shop me-1 text-primary"></i>Available at:</small>
                             <div class="d-flex flex-wrap gap-1">
                                 <span th:each="cName : ${food.canteens}"
                                       th:if="${canteens.contains(cName)}"
-                                      class="badge bg-primary-subtle text-primary border border-primary-subtle"
-                                      th:text="${cName}">Canteen1</span>
-                                <span th:if="${!food.hasAnyActiveCanteen(canteens)}"
+                                      th:class="'badge border ' + (${food.getStockForCanteen(cName) > 0} ? 'bg-primary-subtle text-primary border-primary-subtle' : 'bg-danger-subtle text-danger border-danger-subtle')">
+                                    <span th:text="${cName}">Canteen1</span>:
+                                    <strong th:if="${food.getStockForCanteen(cName) > 0}" th:text="${food.getStockForCanteen(cName)} + ' left'">15 left</strong>
+                                    <strong th:unless="${food.getStockForCanteen(cName) > 0}">Sold Out</strong>
+                                </span>
+                                <span th:if="${!food.hasActiveCanteen(canteens)}"
                                       class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">No active canteen</span>
                             </div>
                         </div>
@@ -149,35 +152,36 @@
                         <div class="food-footer flex-column gap-2">
                             <div class="food-price">₹<span th:text="${#numbers.formatDecimal(food.price, 1, 2)}">0.00</span></div>
 
-                            <!-- Can only order if PREPARED, AVAILABLE AND AT LEAST ONE ACTIVE CANTEEN EXISTS -->
+                            <!-- Can only order if PREPARED, AVAILABLE AND AT LEAST ONE ACTIVE CANTEEN HAS STOCK -->
                             <form th:if="${food.available and food.hasAnyActiveCanteen(canteens)}" th:action="@{/cart/add}" method="post" class="w-100">
                                 <input type="hidden" name="foodId" th:value="${food.foodId}">
                                 <div class="d-flex align-items-center gap-2 w-100">
-                                    <select name="canteen" class="form-select form-select-sm flex-grow-1" required>
+                                    <select name="canteen" class="form-select form-select-sm flex-grow-1" required onchange="onCanteenChange(this)">
                                         <option th:each="canteen : ${food.canteens}"
-                                                th:if="${canteens.contains(canteen)}"
+                                                th:if="${canteens.contains(canteen) and food.getStockForCanteen(canteen) > 0}"
                                                 th:value="${canteen}"
-                                                th:text="${canteen}"
-                                                th:selected="${selectedCanteen == canteen}">Canteen1</option>
+                                                th:data-stock="${food.getStockForCanteen(canteen)}"
+                                                th:text="${canteen} + ' (' + ${food.getStockForCanteen(canteen)} + ' left)'"
+                                                th:selected="${selectedCanteen == canteen}">Canteen1 (15 left)</option>
                                     </select>
-                                    <input type="number" name="quantity" value="1" min="1" max="10"
-                                           class="form-control form-control-sm text-center px-1" style="width: 60px;" required>
+                                    <input type="number" name="quantity" value="1" min="1"
+                                           class="form-control form-control-sm text-center px-1 qty-input" style="width: 60px;" required>
                                     <button type="submit" class="btn btn-canteen-primary btn-sm flex-shrink-0" title="Add to Tray">
                                         <i class="bi bi-cart-plus-fill"></i> Add
                                     </button>
                                 </div>
                             </form>
 
-                            <!-- Disabled if prepared today but no active canteen provides it -->
+                            <!-- Disabled if active canteen exists but no stock or disabled -->
                             <button th:if="${food.available and !food.hasAnyActiveCanteen(canteens)}" class="btn btn-sm btn-secondary w-100" disabled
-                                    title="This dish is not available in any currently active canteen">
-                                <i class="bi bi-shop me-1"></i>Canteen Inactive
+                                    title="Sold out in all active canteens">
+                                <i class="bi bi-slash-circle me-1"></i>Sold Out in Canteens
                             </button>
 
-                            <!-- Strictly disabled if NOT prepared today -->
+                            <!-- Strictly disabled if NOT prepared or 0 stock -->
                             <button th:unless="${food.available}" class="btn btn-sm btn-secondary w-100" disabled
-                                    title="This dish is not prepared on the counter today">
-                                <i class="bi bi-slash-circle me-1"></i>Not in Counter
+                                    title="This dish is not available or sold out today">
+                                <i class="bi bi-slash-circle me-1"></i>Sold Out / Unavailable
                             </button>
                         </div>
                     </div>
@@ -210,6 +214,28 @@
         }
         window.location.search = urlParams.toString();
     }
+
+    function onCanteenChange(selectElem) {
+        const selectedOpt = selectElem.options[selectElem.selectedIndex];
+        if (selectedOpt) {
+            const stock = parseInt(selectedOpt.getAttribute('data-stock') || '10', 10);
+            const form = selectElem.closest('form');
+            const qtyInput = form.querySelector('.qty-input');
+            if (qtyInput) {
+                qtyInput.max = stock;
+                if (parseInt(qtyInput.value, 10) > stock) {
+                    qtyInput.value = Math.max(1, stock);
+                }
+            }
+        }
+    }
+
+    // Initialize max attribute on load
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('select[name="canteen"]').forEach(function(sel) {
+            onCanteenChange(sel);
+        });
+    });
 </script>
 </body>
 </html>

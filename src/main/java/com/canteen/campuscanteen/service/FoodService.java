@@ -48,6 +48,9 @@ public class FoodService {
     }
 
     public Food saveFood(Food food) {
+        if (food != null) {
+            food.syncAvailability();
+        }
         return foodRepository.save(food);
     }
 
@@ -55,11 +58,30 @@ public class FoodService {
         Optional<Food> opt = foodRepository.findById(foodId);
         if (opt.isPresent()) {
             Food f = opt.get();
-            f.setAvailable(!f.isAvailable());
+            boolean newStatus = !f.isAvailable();
+            f.setAvailable(newStatus);
+            if (newStatus && f.getTotalStock() == 0) {
+                // If toggled on while at 0 stock, provide a practical restock for its canteens
+                if (f.getCanteens() != null && !f.getCanteens().isEmpty()) {
+                    for (String c : f.getCanteens()) {
+                        f.setStockForCanteen(c, 15);
+                    }
+                } else {
+                    f.setStockForCanteen("Canteen1", 15);
+                }
+                f.setAvailable(true);
+            }
             foodRepository.save(f);
             return f.isAvailable();
         }
         return false;
+    }
+
+    public Food updateStock(Long foodId, String canteen, int quantity) {
+        Food food = foodRepository.findById(foodId)
+                .orElseThrow(() -> new IllegalArgumentException("Food not found with id: " + foodId));
+        food.setStockForCanteen(canteen, quantity);
+        return foodRepository.save(food);
     }
 
     public void deleteFood(Long foodId) {

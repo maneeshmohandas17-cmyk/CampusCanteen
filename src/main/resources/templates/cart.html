@@ -80,6 +80,13 @@
                                                     <span class="badge bg-primary text-white me-1"><i class="bi bi-shop me-1"></i><span th:text="${item.canteen}">Canteen1</span></span>
                                                     <span th:text="${item.food.counterLocation}">Hot Counter</span>
                                                 </small>
+                                                <small class="d-block mt-1">
+                                                    <span class="text-muted">Stock in <span th:text="${item.canteen}">Canteen1</span>:</span>
+                                                    <strong th:class="${item.food.getStockForCanteen(item.canteen) >= item.quantity} ? 'text-success' : 'text-danger'"
+                                                            th:text="${item.food.getStockForCanteen(item.canteen)} + ' available'">15 available</strong>
+                                                    <span th:if="${item.quantity > item.food.getStockForCanteen(item.canteen)}"
+                                                          class="badge bg-danger-subtle text-danger border ms-1">Exceeds Stock!</span>
+                                                </small>
                                             </div>
                                         </div>
                                     </td>
@@ -92,7 +99,8 @@
                                         <form th:action="@{/cart/update}" method="post" class="d-flex justify-content-center align-items-center gap-1">
                                             <input type="hidden" name="foodId" th:value="${item.food.foodId}">
                                             <input type="hidden" name="canteen" th:value="${item.canteen}">
-                                            <input type="number" name="quantity" th:value="${item.quantity}" min="1" max="20"
+                                            <input type="number" name="quantity" th:value="${item.quantity}" min="1"
+                                                   th:max="${item.food.getStockForCanteen(item.canteen)}"
                                                    class="form-control form-control-sm text-center px-1" style="width: 60px;"
                                                    onchange="this.form.submit()">
                                         </form>

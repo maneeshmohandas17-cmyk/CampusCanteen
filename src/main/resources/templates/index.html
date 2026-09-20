@@ -147,8 +147,8 @@
                         <div class="food-body">
                             <div class="d-flex justify-content-between align-items-start mb-1">
                                 <span class="badge bg-secondary-subtle text-secondary small" th:text="${food.category}">Category</span>
-                                <span th:if="${food.available}" class="badge bg-success-subtle text-success small">Ready in Counter</span>
-                                <span th:unless="${food.available}" class="badge bg-danger-subtle text-danger small">Not Available</span>
+                                <span th:if="${food.available}" class="badge bg-success-subtle text-success small" th:text="${food.totalStock} + ' in Stock'">Ready in Counter</span>
+                                <span th:unless="${food.available}" class="badge bg-danger-subtle text-danger small">Sold Out</span>
                             </div>
 
                             <h5 class="food-title text-truncate" th:text="${food.name}">Food Name</h5>
@@ -163,7 +163,7 @@
                                         <i class="bi bi-plus-lg me-1"></i>Add
                                     </button>
                                 </form>
-                                <button th:unless="${food.available}" class="btn btn-sm btn-secondary" disabled>Not Available</button>
+                                <button th:unless="${food.available}" class="btn btn-sm btn-secondary" disabled>Sold Out</button>
                             </div>
                         </div>
                     </div>

@@ -51,10 +51,14 @@ public class CartController {
         if (selectedCanteen == null || selectedCanteen.trim().isEmpty()) {
             java.util.Optional<Food> foodOpt = foodService.getFoodById(foodId);
             if (foodOpt.isPresent() && foodOpt.get().getCanteens() != null) {
-                selectedCanteen = foodOpt.get().getCanteens().stream()
-                        .filter(canteenService::isValidCanteen)
+                Food f = foodOpt.get();
+                selectedCanteen = f.getCanteens().stream()
+                        .filter(c -> canteenService.isValidCanteen(c) && f.getStockForCanteen(c) > 0)
                         .findFirst()
-                        .orElse(null);
+                        .orElseGet(() -> f.getCanteens().stream()
+                                .filter(canteenService::isValidCanteen)
+                                .findFirst()
+                                .orElse(null));
             }
         }
 
@@ -63,8 +67,12 @@ public class CartController {
             return "redirect:/menu";
         }
 
-        cartService.addToCart(session, foodId, quantity, selectedCanteen);
-        redirectAttributes.addFlashAttribute("successToast", "Item added to your canteen tray!");
+        try {
+            cartService.addToCart(session, foodId, quantity, selectedCanteen);
+            redirectAttributes.addFlashAttribute("successToast", "Item added to your canteen tray!");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
 
         String referer = request.getHeader("Referer");
         if (referer != null && !referer.isEmpty()) {
@@ -77,8 +85,13 @@ public class CartController {
     public String updateQuantity(@RequestParam Long foodId,
                                  @RequestParam String canteen,
                                  @RequestParam int quantity,
-                                 HttpSession session) {
-        cartService.updateQuantity(session, foodId, canteen, quantity);
+                                 HttpSession session,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            cartService.updateQuantity(session, foodId, canteen, quantity);
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
         return "redirect:/cart";
     }
 
